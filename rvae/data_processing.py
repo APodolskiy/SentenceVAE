@@ -1,10 +1,10 @@
 # Data tokenization and pre-processing
-from torch
+from torchtext.data import Dataset
 
 
 class PTB(Dataset):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, examples, fields):
+        super().__init__(examples, fields)
         pass
 
     def __len__(self):
@@ -12,8 +12,8 @@ class PTB(Dataset):
 
 
 class Yelp(Dataset):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, examples, fields):
+        super().__init__(examples, fields)
         pass
 
     def __len__(self):
