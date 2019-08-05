@@ -22,7 +22,7 @@ class RNNEncoder(nn.Module):
         x = pack_padded_sequence(x, lengths)
         out, h_n = self.rnn(x)
         h_n, lengths = pad_packed_sequence(h_n, padding_value=self.pad_value)
-        if self.bidirectional:
+        if self.bidirectional or self.num_layers > 1:
             h_n_transposed = h_n.transpose(0, 1).contiguous()
             h_n = h_n_transposed.view(bs, -1).contiguous()
         else:
