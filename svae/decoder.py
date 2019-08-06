@@ -21,6 +21,7 @@ class RNNDecoder(nn.Module):
     def forward(self, x: torch.Tensor,
                 lengths: torch.Tensor,
                 init_state: Optional[torch.Tensor] = None):
+        init_state = init_state.expand((self.num_layers, *init_state.size()))
         x_packed = pack_padded_sequence(x, lengths)
         out, h_n = self.rnn(x_packed, init_state)
         out, _ = pad_packed_sequence(out, padding_value=self.pad_value)
