@@ -37,6 +37,6 @@ class PTB(Dataset):
 
 if __name__ == '__main__':
     tokenize = lambda x: x.strip().split()
-    text_field = Field(sequential=True, use_vocab=True, init_token='<sos>',
-                       eos_token='<eos>', tokenize=tokenize, include_lengths=True)
+    text_field = Field(sequential=True, use_vocab=True, init_token='<s>',
+                       eos_token='</s>', tokenize=tokenize, include_lengths=True)
     print(PTB.splits(fields=(text_field, text_field)))
