@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 import torch.nn as nn
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
@@ -15,8 +17,11 @@ class RNNDecoder(nn.Module):
                           dropout=dropout,
                           bidirectional=False)
 
-    def forward(self, x: torch.Tensor, lengths: torch.Tensor):
+    # TODO: try out different conditioning schemes
+    def forward(self, x: torch.Tensor,
+                lengths: torch.Tensor,
+                init_state: Optional[torch.Tensor] = None):
         x_packed = pack_padded_sequence(x, lengths)
-        out, h_n = self.rnn(x_packed)
+        out, h_n = self.rnn(x_packed, init_state)
         out, _ = pad_packed_sequence(out, padding_value=self.pad_value)
         return out
