@@ -1,4 +1,4 @@
-SOS_WORD = '<s>'
-EOS_WORD = '</s>'
-UNK_WORD = '<unk>'
-PAD_WORD = '<pad>'
+SOS_TOKEN = '<s>'
+EOS_TOKEN = '</s>'
+UNK_TOKEN = '<unk>'
+PAD_TOKEN = '<pad>'
