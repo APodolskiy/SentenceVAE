@@ -20,16 +20,16 @@ class SentenceVAE(nn.Module):
         self.latent_size = 128
         self.word_drop_p = word_drop_p
         # Special symbols
-        self.unk_idx = vocab.stoi[UNK_WORD]
-        self.pad_idx = vocab.stoi[PAD_WORD]
-        self.sos_idx = vocab.stoi[SOS_WORD]
-        self.eos_idx = vocab.stoi[EOS_WORD]
+        self.unk_idx = vocab.stoi[UNK_TOKEN]
+        self.pad_idx = vocab.stoi[PAD_TOKEN]
+        self.sos_idx = vocab.stoi[SOS_TOKEN]
+        self.eos_idx = vocab.stoi[EOS_TOKEN]
         # Model
         self.embedding = nn.Embedding(len(vocab), self.emb_dim)
         self.encoder = RNNEncoder(input_size=self.emb_dim, pad_value=self.pad_idx)
         self.decoder = RNNDecoder(input_size=self.emb_dim, pad_value=self.pad_idx)
-        self.code2mu = nn.Linear(128, self.latent_size)
-        self.code2sigma = nn.Linear(128, self.latent_size)
+        self.code2mu = nn.Linear(2*128, self.latent_size)
+        self.code2sigma = nn.Linear(2*128, self.latent_size)
         self.out2vocab = nn.Linear(128, len(vocab))
         # Tie weights
         if tie_weights:
@@ -40,13 +40,13 @@ class SentenceVAE(nn.Module):
     def forward(self, batch):
         inp, inp_lengths = batch.inp
         trg, trg_lengths = batch.trg
-        seq_len, batch_size, _ = inp.size()
+        seq_len, batch_size = inp.size()
         inp_emb = self.embedding(inp)
         enc = self.encoder(inp_emb, inp_lengths)
 
         mu = self.code2mu(enc)
         log_sigma = self.code2sigma(enc)
-        kl_loss = 0.5 * torch.sum(log_sigma + log_sigma.exp() + mu.pow(2) - 1)
+        kl_loss = 0.5 * torch.sum(log_sigma.exp() + mu.pow(2) - 1 - log_sigma)
 
         sigma = torch.exp(0.5*log_sigma)
         z = self.sample_posterior(mu, sigma)
@@ -54,14 +54,14 @@ class SentenceVAE(nn.Module):
         trg_inp, trg_out = trg[:-1], trg[1:]
         trg_inp = self.word_dropout(trg_inp)
         trg_emb = self.embedding(trg_inp)
-        out = self.decoder(trg_emb, trg_lengths, z)
+        out = self.decoder(trg_emb, trg_lengths - 1, z)
         logits = self.out2vocab(out)
         logp = torch.log_softmax(logits, dim=-1)
-        logp_words = logp.transpose(0, 1).contiguous().view(batch_size*seq_len, -1)
-        target = trg_out.transpose(0, 1).view(-1).contiguous()
+        logp_words = logp.transpose(0, 1).contiguous().view(batch_size*(seq_len - 1), -1)
+        target = trg_out.transpose(0, 1).contiguous().view(-1)
         loss_xe = self.loss_func(logp_words, target)
         # TODO: mean along sentence or sum whole losses
-        loss_xe = loss_xe.view(batch_size, seq_len).mean(dim=1).sum()
+        loss_xe = loss_xe.view(batch_size, seq_len - 1).mean(dim=1).sum()
 
         loss = loss_xe + kl_loss
         return loss
@@ -76,7 +76,7 @@ class SentenceVAE(nn.Module):
 
     def word_dropout(self, inp: torch.Tensor) -> torch.Tensor:
         tokens = inp.clone()
-        drop_probs = torch.rand_like(tokens)
+        drop_probs = torch.rand(*tokens.size())
         drop_probs[(tokens == self.sos_idx) | (tokens == self.eos_idx) | (tokens == self.pad_idx)] = 1
         mask = drop_probs < self.word_drop_p
         tokens[mask] = self.unk_idx
