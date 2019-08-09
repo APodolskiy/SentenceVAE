@@ -17,12 +17,13 @@ if __name__ == '__main__':
     parser.add_argument("--config", type=str, required=False, metavar='PATH',
                         help="Path to a configuration file.")
     parser.add_argument("--run-dir", type=str, required=False, metavar='PATH',
-                        help="Path to a directory where model "
-                             "checkpoints will be stored.")
+                        help="Path to a directory where model checkpoints will be stored.")
+    parser.add_argument("--force", action='store_true',
+                        help="Whether to rewrite data if run directory already exists.")
     args = parser.parse_args()
 
     #config = json.loads(evaluate_file(args.config))
-    TEXT = Field(sequential=True, use_vocab=True, lwoer=True,
+    TEXT = Field(sequential=True, use_vocab=True, lower=True,
                  init_token=SOS_TOKEN, eos_token=EOS_TOKEN,
                  pad_token=PAD_TOKEN, unk_token=UNK_TOKEN,
                  tokenize=lambda x: x.strip().split(), include_lengths=True)

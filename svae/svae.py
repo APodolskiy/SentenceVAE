@@ -7,6 +7,7 @@ from torchtext.vocab import Vocab
 from svae.encoder import RNNEncoder
 from svae.decoder import RNNDecoder
 from svae.dataset_utils import *
+from svae.utils.annealing import SigmoidAnnealing
 
 
 class SentenceVAE(nn.Module):
@@ -35,6 +36,7 @@ class SentenceVAE(nn.Module):
         if tie_weights:
             self.out2vocab.weight = self.embedding.weight
 
+        self.annealing_function = SigmoidAnnealing()
         self.loss_func = nn.NLLLoss(ignore_index=self.pad_idx, reduction='none')
 
     def forward(self, batch):
@@ -63,7 +65,8 @@ class SentenceVAE(nn.Module):
         # TODO: mean along sentence or sum whole losses
         loss_xe = loss_xe.view(batch_size, seq_len - 1).mean(dim=1).sum()
 
-        loss = loss_xe + kl_loss
+        kl_coeff = self.annealing_function()
+        loss = loss_xe + kl_coeff * kl_loss
         return loss
 
     def sample_posterior(self, mu: torch.Tensor, sigma: torch.Tensor) -> torch.Tensor:
