@@ -22,7 +22,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     #config = json.loads(evaluate_file(args.config))
-    TEXT = Field(sequential=True, use_vocab=True,
+    TEXT = Field(sequential=True, use_vocab=True, lwoer=True,
                  init_token=SOS_TOKEN, eos_token=EOS_TOKEN,
                  pad_token=PAD_TOKEN, unk_token=UNK_TOKEN,
                  tokenize=lambda x: x.strip().split(), include_lengths=True)
@@ -43,7 +43,7 @@ if __name__ == '__main__':
 
     model = SentenceVAE(vocab=TEXT.vocab)
     model.to(device)
-    optimizer = optim.Adam(params=model.parameters(), lr=1e-3, betas=(0.9, 0.99))
+    optimizer = optim.Adam(params=model.parameters(), lr=1e-3, betas=(0.9, 0.999))
 
     EPOCHS = 10
     for epoch in range(EPOCHS):
