@@ -18,7 +18,7 @@ class Annealing:
         self.warm_up_steps = warm_up_steps
         self.num_steps = 0
 
-    def step(self) -> float:
+    def __call__(self) -> float:
         """
         Perform a step on annealing function.
         :return: annealing function value
