@@ -86,5 +86,8 @@ class SentenceVAE(nn.Module):
         tokens = tokens.to(inp.device)
         return tokens
 
+    def get_metrics(self, reset: bool = False):
+        pass
+
     def sample(self, num_samples: int, max_len: int = 50) -> List[str]:
         pass
