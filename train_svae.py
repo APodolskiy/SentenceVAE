@@ -1,6 +1,5 @@
 from argparse import ArgumentParser
 import json
-from pprint import pprint
 import shutil
 
 from _jsonnet import evaluate_file
@@ -93,7 +92,7 @@ if __name__ == '__main__':
 
         print("Sentence samples.")
         samples = model.sample(num_samples=10, device=device)
-        pprint(samples)
+        print(*samples, sep='\n')
 
     # TODO: model saving
     writer.close()

@@ -52,7 +52,7 @@ class SigmoidAnnealing(Annealing):
                  steps: int = 5000,
                  warm_up_steps: int = 0,
                  fast: bool = False,
-                 eps: float = 1e-6):
+                 eps: float = 1e-5):
         """
         Sigmoid annealing function.
         :param max_value: maximum value function value
