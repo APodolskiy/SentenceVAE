@@ -20,8 +20,8 @@ class AverageMetric:
         self.steps = 0
         self.total_value = 0
 
-    def __call__(self, value: float, num_steps: int):
-        self.steps += 1
+    def __call__(self, value: float, num_steps: int = 1):
+        self.steps += num_steps
         self.total_value += value
 
     def get_metric(self, reset: bool = False) -> float:
