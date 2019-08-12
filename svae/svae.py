@@ -72,8 +72,7 @@ class SentenceVAE(nn.Module):
         logp_words = logp.transpose(0, 1).contiguous().view(batch_size*(seq_len - 1), -1)
         target = trg_out.transpose(0, 1).contiguous().view(-1)
         loss_xe = self.loss_func(logp_words, target)
-        # TODO: mean along sentence or sum whole losses
-        loss_xe = loss_xe.view(batch_size, seq_len - 1).mean(dim=1).sum()
+        loss_xe = loss_xe.view(batch_size, seq_len - 1).sum()
         self.rec_loss_metric(loss_xe.item(), num_steps=batch_size)
 
         kl_coeff = self.annealing_function()
