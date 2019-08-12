@@ -1,6 +1,7 @@
-import shutil
 from argparse import ArgumentParser
 import json
+from pprint import pprint
+import shutil
 
 from _jsonnet import evaluate_file
 from pathlib import Path
@@ -40,7 +41,7 @@ if __name__ == '__main__':
                  pad_token=PAD_TOKEN, unk_token=UNK_TOKEN,
                  tokenize=lambda x: x.strip().split(), include_lengths=True)
     fields = (('inp', TEXT), ('trg', TEXT))
-    train_data, dev_data, test_data = PTB.splits(fields=fields, max_len=50)
+    train_data, dev_data, test_data = PTB.splits(fields=fields)
     TEXT.build_vocab(train_data)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -89,6 +90,10 @@ if __name__ == '__main__':
             metrics = model.get_metrics(reset=True)
             for metric, value in metrics.items():
                 writer.add_scalar(f'dev/{metric}', value, epoch)
+
+        print("Sentence samples.")
+        samples = model.sample(num_samples=10, device=device)
+        pprint(samples)
 
     # TODO: model saving
     writer.close()
