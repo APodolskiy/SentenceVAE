@@ -48,7 +48,7 @@ if __name__ == '__main__':
 
     train_iter, dev_iter, test_iter = Iterator.splits(
         datasets=(train_data, dev_data, test_data),
-        batch_sizes=(64, 100, 100),
+        batch_sizes=(32, 100, 100),
         shuffle=True,
         sort_within_batch=True,
         sort_key=lambda x: len(x.inp),
@@ -68,20 +68,27 @@ if __name__ == '__main__':
         model.train()
         for batch in tqdm(train_iter):
             iters += 1
-            loss = model(batch)
+            output = model(batch)
+            loss = output['loss']
             optimizer.zero_grad()
             loss.backward()
             # TODO: add gradient clipping
             optimizer.step()
-            writer.add_scalar('train/ELBO', loss.item(), iters)
+            writer.add_scalar('train/ELBO', -loss.item(), iters)
+            writer.add_scalar('train/rec_loss', output['rec_loss'], iters)
+            writer.add_scalar('train/kl_loss', output['kl_loss'], iters)
+            writer.add_scalar('train/kl_weight', output['kl_weight'], iters)
+        metrics = model.get_metrics(reset=True)
+        for metric, value in metrics.items():
+            writer.add_scalar(f'train/{metric}', value, epoch)
         # Validation
         model.eval()
         with torch.no_grad():
-            dev_elbo = 0
             for batch in tqdm(dev_iter):
-                loss = model(batch)
-                dev_elbo += loss.item()
-            writer.add_scalar('dev/ELBO', dev_elbo, epoch)
+                output = model(batch)
+            metrics = model.get_metrics(reset=True)
+            for metric, value in metrics.items():
+                writer.add_scalar(f'dev/{metric}', value, epoch)
 
     # TODO: model saving
     writer.close()

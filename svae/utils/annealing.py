@@ -27,8 +27,6 @@ class Annealing:
         self.num_steps += 1
         if step < self.warm_up_steps:
             return 0
-        elif step > self.steps + self.warm_up_steps:
-            return self.max_value
         return min(self.max_value, self._func(step - self.warm_up_steps))
 
     def _func(self, x: int) -> float:
@@ -53,7 +51,8 @@ class SigmoidAnnealing(Annealing):
                  max_value: float = 1.0,
                  steps: int = 5000,
                  warm_up_steps: int = 0,
-                 fast: bool = False):
+                 fast: bool = False,
+                 eps: float = 1e-6):
         """
         Sigmoid annealing function.
         :param max_value: maximum value function value
@@ -64,7 +63,7 @@ class SigmoidAnnealing(Annealing):
         super(SigmoidAnnealing, self).__init__(max_value=max_value,
                                                steps=steps,
                                                warm_up_steps=warm_up_steps)
-        self.k = -(log(-1 + 1/(1 - 1e-3)))/(self.steps / 2)
+        self.k = -(log(-1 + 1/(1 - eps)))/(0.5 * self.steps)
         self.fast = fast
 
     def _func(self, x: int) -> float:

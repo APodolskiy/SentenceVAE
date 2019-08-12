@@ -8,6 +8,7 @@ from svae.encoder import RNNEncoder
 from svae.decoder import RNNDecoder
 from svae.dataset_utils import *
 from svae.utils.annealing import SigmoidAnnealing
+from svae.utils.training import AverageMetric
 
 
 class SentenceVAE(nn.Module):
@@ -17,27 +18,32 @@ class SentenceVAE(nn.Module):
                  word_drop_p: float = 0.2,
                  tie_weights: bool = False):
         super().__init__()
+        self.vocab = vocab
         self.emb_dim = emb_dim
         self.latent_size = 128
         self.word_drop_p = word_drop_p
         # Special symbols
-        self.unk_idx = vocab.stoi[UNK_TOKEN]
-        self.pad_idx = vocab.stoi[PAD_TOKEN]
-        self.sos_idx = vocab.stoi[SOS_TOKEN]
-        self.eos_idx = vocab.stoi[EOS_TOKEN]
+        self.unk_idx = self.vocab.stoi[UNK_TOKEN]
+        self.pad_idx = self.vocab.stoi[PAD_TOKEN]
+        self.sos_idx = self.vocab.stoi[SOS_TOKEN]
+        self.eos_idx = self.vocab.stoi[EOS_TOKEN]
         # Model
-        self.embedding = nn.Embedding(len(vocab), self.emb_dim)
+        self.embedding = nn.Embedding(len(self.vocab), self.emb_dim)
         self.encoder = RNNEncoder(input_size=self.emb_dim, pad_value=self.pad_idx)
         self.decoder = RNNDecoder(input_size=self.emb_dim, pad_value=self.pad_idx)
         self.code2mu = nn.Linear(2*128, self.latent_size)
         self.code2sigma = nn.Linear(2*128, self.latent_size)
-        self.out2vocab = nn.Linear(128, len(vocab))
+        self.out2vocab = nn.Linear(128, len(self.vocab))
         # Tie weights
         if tie_weights:
             self.out2vocab.weight = self.embedding.weight
 
         self.annealing_function = SigmoidAnnealing()
         self.loss_func = nn.NLLLoss(ignore_index=self.pad_idx, reduction='none')
+
+        self.elbo_metric = AverageMetric()
+        self.rec_loss_metric = AverageMetric()
+        self.kl_loss_metric = AverageMetric()
 
     def forward(self, batch):
         inp, inp_lengths = batch.inp
@@ -49,6 +55,7 @@ class SentenceVAE(nn.Module):
         mu = self.code2mu(enc)
         log_sigma = self.code2sigma(enc)
         kl_loss = 0.5 * torch.sum(log_sigma.exp() + mu.pow(2) - 1 - log_sigma)
+        self.kl_loss_metric(kl_loss.item(), num_steps=batch_size)
 
         sigma = torch.exp(0.5*log_sigma)
         z = self.sample_posterior(mu, sigma)
@@ -64,10 +71,17 @@ class SentenceVAE(nn.Module):
         loss_xe = self.loss_func(logp_words, target)
         # TODO: mean along sentence or sum whole losses
         loss_xe = loss_xe.view(batch_size, seq_len - 1).mean(dim=1).sum()
+        self.rec_loss_metric(loss_xe.item(), num_steps=batch_size)
 
         kl_coeff = self.annealing_function()
         loss = loss_xe + kl_coeff * kl_loss
-        return loss
+        self.elbo_metric(-loss.item(), num_steps=batch_size)
+        return {
+            'loss': loss,
+            'rec_loss': loss_xe.item(),
+            'kl_loss': kl_loss.item(),
+            'kl_weight': kl_coeff
+        }
 
     def sample_posterior(self, mu: torch.Tensor, sigma: torch.Tensor) -> torch.Tensor:
         eps = torch.randn_like(mu).to(sigma.device)
@@ -87,7 +101,13 @@ class SentenceVAE(nn.Module):
         return tokens
 
     def get_metrics(self, reset: bool = False):
-        pass
+        return {
+            'elbo': self.elbo_metric.get_metric(reset),
+            'data_term': self.rec_loss_metric.get_metric(reset),
+            'kl_term': self.kl_loss_metric.get_metric(reset)
+        }
 
     def sample(self, num_samples: int, max_len: int = 50) -> List[str]:
+        prev_words = torch.tensor([self.sos_idx]*num_samples).view(1, -1)
+        z = self.sample_prior(num_samples)
         pass
