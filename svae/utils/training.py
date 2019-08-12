@@ -1,3 +1,9 @@
+from pathlib import Path
+from typing import Dict
+
+import torch
+
+
 class AggregateMetric:
     def __init__(self):
         self.total_value = 0
@@ -33,3 +39,12 @@ class AverageMetric:
     def reset(self):
         self.steps = 0
         self.total_value = 0
+
+
+def save_checkpoint(state: Dict, save_dir: str, name='vae'):
+    save_dir = Path(save_dir)
+    checkpoint_path = save_dir / f"{name}.bin"
+    if not save_dir.exists():
+        print(f"There is no checkpoint directory! Creating new directory: {checkpoint_path}")
+        checkpoint_path.mkdir(parents=True)
+    torch.save(state, checkpoint_path)

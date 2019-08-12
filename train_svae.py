@@ -15,7 +15,7 @@ from torchtext.data import Field, Iterator
 from svae.dataset_utils import *
 from svae.dataset_utils.datasets import PTB
 from svae.svae import SentenceVAE
-
+from svae.utils.training import save_checkpoint
 
 if __name__ == '__main__':
     parser = ArgumentParser(description="Training of Sentence VAE")
@@ -94,5 +94,5 @@ if __name__ == '__main__':
         samples = model.sample(num_samples=10, device=device)
         print(*samples, sep='\n')
 
-    # TODO: model saving
+    save_checkpoint(model.state_dict(), run_dir)
     writer.close()
