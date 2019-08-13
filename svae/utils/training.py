@@ -1,8 +1,10 @@
 from pathlib import Path
 import shutil
-from typing import Dict
+from typing import Dict, Optional
 
 import torch
+import torch.nn as nn
+from torch.optim.optimizer import Optimizer
 
 
 class AggregateMetric:
@@ -52,3 +54,17 @@ def save_checkpoint(state: Dict, save_dir: str, name: str = 'vae', is_best: bool
     if is_best:
         best_model_path = save_dir / f"best_{name}.pt"
         shutil.copyfile(checkpoint_path, best_model_path)
+
+
+def load_checkpoint(checkpoint_path: str,
+                    model: nn.Module,
+                    optimizer: Optional[Optimizer] = None):
+    checkpoint_path = Path(checkpoint_path)
+    if not checkpoint_path.exists():
+        raise ValueError(f"File doesn't exist: {checkpoint_path}")
+    state_dict = torch.load(checkpoint_path)
+    model.load_state_dict(state_dict)
+
+    if optimizer is not None:
+        optimizer.load_state_dict(state_dict['optim_dict'])
+    return state_dict
