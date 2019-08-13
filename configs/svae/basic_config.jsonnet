@@ -4,6 +4,7 @@
         latent_dim: 16,
         word_drop_p: 0.2,
         tie_weights: false,
+        greedy: false,
         encoder: {
             input_size: $.model.embed_dim,
             hidden_size: 256,

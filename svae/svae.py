@@ -21,6 +21,7 @@ class SentenceVAE(nn.Module):
         self.embed_dim = params.embed_dim
         self.latent_dim = params.latent_dim
         self.word_drop_p = params.word_drop_p
+        self.greedy = params.get('greedy', False)
         # Special symbols
         self.unk_idx = self.vocab.stoi[UNK_TOKEN]
         self.pad_idx = self.vocab.stoi[PAD_TOKEN]
@@ -142,6 +143,8 @@ class SentenceVAE(nn.Module):
         return samples
 
     def _sample_words(self, logits: torch.Tensor) -> torch.Tensor:
+        if self.greedy:
+            return torch.topk(logits, k=1, dim=-1)[1].squeeze(0)
         logp = torch.log_softmax(logits, dim=-1)
         idx_samples = logp.squeeze(0).exp().multinomial(1)
         return idx_samples
