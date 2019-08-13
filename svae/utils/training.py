@@ -1,4 +1,5 @@
 from pathlib import Path
+import shutil
 from typing import Dict
 
 import torch
@@ -41,10 +42,13 @@ class AverageMetric:
         self.total_value = 0
 
 
-def save_checkpoint(state: Dict, save_dir: str, name='vae'):
+def save_checkpoint(state: Dict, save_dir: str, name: str = 'vae', is_best: bool = False):
     save_dir = Path(save_dir)
-    checkpoint_path = save_dir / f"{name}.bin"
+    checkpoint_path = save_dir / f"{name}.pt"
     if not save_dir.exists():
         print(f"There is no checkpoint directory! Creating new directory: {checkpoint_path}")
         checkpoint_path.mkdir(parents=True)
     torch.save(state, checkpoint_path)
+    if is_best:
+        best_model_path = save_dir / f"best_{name}.pt"
+        shutil.copyfile(checkpoint_path, best_model_path)
