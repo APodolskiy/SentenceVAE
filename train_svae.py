@@ -15,13 +15,14 @@ from torchtext.data import Field, Iterator
 from svae.dataset_utils import *
 from svae.dataset_utils.datasets import PTB
 from svae.svae import SentenceVAE
-from svae.utils.training import save_checkpoint
+from svae.utils.training import save_checkpoint, Params
+
 
 if __name__ == '__main__':
     parser = ArgumentParser(description="Training of Sentence VAE")
-    parser.add_argument("--config", type=str, required=False, metavar='PATH',
+    parser.add_argument("--config", type=str, required=True, metavar='PATH',
                         help="Path to a configuration file.")
-    parser.add_argument("--run-dir", type=str, required=False, metavar='PATH',
+    parser.add_argument("--run-dir", type=str, required=True, metavar='PATH',
                         help="Path to a directory where model checkpoints will be stored.")
     parser.add_argument("--force", action='store_true',
                         help="Whether to rewrite data if run directory already exists.")
@@ -34,7 +35,11 @@ if __name__ == '__main__':
 
     writer = SummaryWriter(logdir=str(run_dir))
 
-    #config = json.loads(evaluate_file(args.config))
+    shutil.copyfile(args.config, run_dir / f"config.jsonnet")
+    config = json.loads(evaluate_file(args.config))
+    params = Params(config)
+    training_params = params.pop('training')
+
     TEXT = Field(sequential=True, use_vocab=True, lower=True,
                  init_token=SOS_TOKEN, eos_token=EOS_TOKEN,
                  pad_token=PAD_TOKEN, unk_token=UNK_TOKEN,
@@ -48,20 +53,21 @@ if __name__ == '__main__':
 
     train_iter, dev_iter, test_iter = Iterator.splits(
         datasets=(train_data, dev_data, test_data),
-        batch_sizes=(32, 100, 100),
+        batch_sizes=(training_params.batch_size,
+                     training_params.test_batch_size,
+                     training_params.test_batch_size),
         shuffle=True,
         sort_within_batch=True,
         sort_key=lambda x: len(x.inp),
         device=device
     )
 
-    model = SentenceVAE(vocab=TEXT.vocab)
+    model = SentenceVAE(vocab=TEXT.vocab, params=params.pop('model'))
     model.to(device)
-    optimizer = optim.Adam(params=model.parameters(), lr=1e-3, betas=(0.9, 0.999))
+    optimizer = optim.Adam(params=model.parameters(), **training_params.pop('optimizer'))
 
-    EPOCHS = 10
     iters = 0
-    for epoch in range(EPOCHS):
+    for epoch in range(training_params.epochs):
         print("#"*20)
         print(f"EPOCH {epoch}\n")
         # Training
@@ -74,7 +80,7 @@ if __name__ == '__main__':
             loss.backward()
             # TODO: add gradient clipping
             optimizer.step()
-            writer.add_scalar('train/ELBO', -loss.item(), iters)
+            writer.add_scalar('train/ELBO', -output['rec_loss'] - output['kl_loss'], iters)
             writer.add_scalar('train/rec_loss', output['rec_loss'], iters)
             writer.add_scalar('train/kl_loss', output['kl_loss'], iters)
             writer.add_scalar('train/kl_weight', output['kl_weight'], iters)

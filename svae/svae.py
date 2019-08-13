@@ -7,40 +7,42 @@ from torchtext.vocab import Vocab
 from svae.encoder import RNNEncoder
 from svae.decoder import RNNDecoder
 from svae.dataset_utils import *
-from svae.utils.annealing import SigmoidAnnealing
-from svae.utils.training import AverageMetric
+from svae.utils.annealing import LogisticAnnealing
+from svae.utils.training import AverageMetric, Params
 
 
 class SentenceVAE(nn.Module):
     def __init__(self,
                  vocab: Vocab,
-                 emb_dim: int = 128,
-                 latent_dim: int = 16,
-                 word_drop_p: float = 0.2,
-                 tie_weights: bool = False):
+                 params: Params):
         super().__init__()
         self.vocab = vocab
-        self.emb_dim = emb_dim
-        self.latent_dim = latent_dim
-        self.word_drop_p = word_drop_p
+        self.params = params
+        self.embed_dim = params.embed_dim
+        self.latent_dim = params.latent_dim
+        self.word_drop_p = params.word_drop_p
         # Special symbols
         self.unk_idx = self.vocab.stoi[UNK_TOKEN]
         self.pad_idx = self.vocab.stoi[PAD_TOKEN]
         self.sos_idx = self.vocab.stoi[SOS_TOKEN]
         self.eos_idx = self.vocab.stoi[EOS_TOKEN]
         # Model
-        self.embedding = nn.Embedding(len(self.vocab), self.emb_dim)
-        self.encoder = RNNEncoder(input_size=self.emb_dim, pad_value=self.pad_idx)
-        self.decoder = RNNDecoder(input_size=self.emb_dim, pad_value=self.pad_idx)
-        self.code2mu = nn.Linear(2*128, self.latent_dim)
-        self.code2sigma = nn.Linear(2*128, self.latent_dim)
-        self.latent2hidden = nn.Linear(self.latent_dim, 128)
-        self.out2vocab = nn.Linear(128, len(self.vocab))
+        self.embedding = nn.Embedding(len(self.vocab), self.embed_dim)
+
+        encoder_params = params.pop('encoder')
+        decoder_params = params.pop('decoder')
+        self.encoder = RNNEncoder(**encoder_params, pad_value=self.pad_idx)
+        self.decoder = RNNDecoder(**decoder_params, pad_value=self.pad_idx)
+
+        self.code2mu = nn.Linear(params.hidden_output_size, self.latent_dim)
+        self.code2sigma = nn.Linear(params.hidden_output_size, self.latent_dim)
+        self.latent2hidden = nn.Linear(self.latent_dim, decoder_params.hidden_size)
+        self.out2vocab = nn.Linear(decoder_params.hidden_size, len(self.vocab))
         # Tie weights
-        if tie_weights:
+        if params.tie_weights:
             self.out2vocab.weight = self.embedding.weight
 
-        self.annealing_function = SigmoidAnnealing()
+        self.annealing_function = LogisticAnnealing()
         self.loss_func = nn.NLLLoss(ignore_index=self.pad_idx, reduction='none')
 
         self.elbo_metric = AverageMetric()
@@ -77,7 +79,7 @@ class SentenceVAE(nn.Module):
 
         kl_coeff = self.annealing_function()
         loss = loss_xe + kl_coeff * kl_loss
-        self.elbo_metric(-loss.item(), num_steps=batch_size)
+        self.elbo_metric((-loss_xe - kl_loss).item(), num_steps=batch_size)
         return {
             'loss': loss,
             'rec_loss': loss_xe.item(),
