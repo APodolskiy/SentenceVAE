@@ -46,7 +46,7 @@ class LinearAnnealing(Annealing):
         return self.max_value * x / self.steps
 
 
-class SigmoidAnnealing(Annealing):
+class LogisticAnnealing(Annealing):
     def __init__(self,
                  max_value: float = 1.0,
                  steps: int = 5000,
@@ -60,9 +60,9 @@ class SigmoidAnnealing(Annealing):
         :param warm_up_steps: number of warm up steps when function returns zero.
         :param fast: use fast approximation of sigmoid function
         """
-        super(SigmoidAnnealing, self).__init__(max_value=max_value,
-                                               steps=steps,
-                                               warm_up_steps=warm_up_steps)
+        super(LogisticAnnealing, self).__init__(max_value=max_value,
+                                                steps=steps,
+                                                warm_up_steps=warm_up_steps)
         self.k = -(log(-1 + 1/(1 - eps)))/(0.5 * self.steps)
         self.fast = fast
 
