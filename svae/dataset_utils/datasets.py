@@ -20,7 +20,9 @@ class PTB(Dataset):
         with open(path, 'r') as fp:
             for line in tqdm(fp):
                 if max_len is not None:
-                    line = line[:max_len]
+                    line_parts = line.split()
+                    truncated_line_parts = line_parts[:max_len]
+                    line = ' '.join(truncated_line_parts)
                 if line != '':
                     examples.append(Example.fromlist(data=(line, line), fields=fields))
         super().__init__(examples=examples, fields=fields, **kwargs)
