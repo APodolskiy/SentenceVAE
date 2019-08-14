@@ -1,9 +1,11 @@
+local annealing_type = 'logistic';
+
 {
     model: {
         embed_dim: 300,
         latent_dim: 16,
         word_drop_p: 0.5,
-        tie_weights: true,
+        tie_weights: false,
         greedy: false,
         encoder: {
             input_size: $.model.embed_dim,
@@ -19,6 +21,19 @@
             dropout: 0.4,
         },
         hidden_output_size: self.encoder.hidden_size * self.encoder.num_layers * (if self.encoder.bidirectional then 2 else 1),
+        annealing:
+        // Two types of annealing functions exists: logistic and linear
+        {
+            type: annealing_type,
+            max_value: 1.0,
+            steps: 8000,
+            warm_up_steps: 100,
+        } +
+        if annealing_type == 'logistic' then{
+            fast: false,
+            eps: 1e-5
+        }
+        else {}
     },
     training: {
         epochs: 20,
@@ -28,5 +43,5 @@
             lr: 1e-3,
             betas: [0.9, 0.999]
         },
-    }
+    },
 }

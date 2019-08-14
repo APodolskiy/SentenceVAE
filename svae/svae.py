@@ -7,7 +7,7 @@ from torchtext.vocab import Vocab
 from svae.encoder import RNNEncoder
 from svae.decoder import RNNDecoder
 from svae.dataset_utils import *
-from svae.utils.annealing import LogisticAnnealing
+from svae.utils.annealing import LogisticAnnealing, LinearAnnealing
 from svae.utils.training import AverageMetric, Params
 
 
@@ -50,7 +50,15 @@ class SentenceVAE(nn.Module):
             out2vocab = nn.Linear(decoder_params.hidden_size, len(self.vocab))
             self.out2vocab.add_module('out', out2vocab)
 
-        self.annealing_function = LogisticAnnealing()
+        annealing_params = self.params.pop('annealing')
+        annealing_type = annealing_params.pop('type')
+        if annealing_type == 'logistic':
+            self.annealing_function = LogisticAnnealing(**annealing_params)
+        elif annealing_type == 'linear':
+            self.annealing_function = LinearAnnealing(**annealing_params)
+        else:
+            raise NotImplemented(f"Annealing function of type: {annealing_type} is not implemented.")
+
         self.loss_func = nn.NLLLoss(ignore_index=self.pad_idx, reduction='none')
 
         self.elbo_metric = AverageMetric()
