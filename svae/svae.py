@@ -75,7 +75,7 @@ class SentenceVAE(nn.Module):
         mu = self.code2mu(enc)
         log_sigma = self.code2sigma(enc)
         kl_loss = 0.5 * torch.sum(log_sigma.exp() + mu.pow(2) - 1 - log_sigma, dim=1).mean()
-        self.kl_loss_metric(kl_loss.item(), num_steps=batch_size)
+        self.kl_loss_metric(kl_loss.item() * batch_size, num_steps=batch_size)
 
         sigma = torch.exp(0.5*log_sigma)
         z = self.sample_posterior(mu, sigma)
@@ -91,11 +91,11 @@ class SentenceVAE(nn.Module):
         target = trg_out.transpose(0, 1).contiguous().view(-1)
         loss_xe = self.loss_func(logp_words, target)
         loss_xe = loss_xe.view(batch_size, seq_len - 1).sum(dim=1).mean()
-        self.rec_loss_metric(loss_xe.item())
+        self.rec_loss_metric(loss_xe.item() * batch_size, num_steps=batch_size)
 
         kl_coeff = self.annealing_function()
         loss = loss_xe + kl_coeff * kl_loss
-        self.elbo_metric((-loss_xe - kl_loss).item())
+        self.elbo_metric((-loss_xe - kl_loss).item() * batch_size, num_steps=batch_size)
         return {
             'loss': loss,
             'rec_loss': loss_xe.item(),

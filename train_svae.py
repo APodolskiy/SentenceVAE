@@ -45,7 +45,7 @@ if __name__ == '__main__':
                  pad_token=PAD_TOKEN, unk_token=UNK_TOKEN,
                  tokenize=lambda x: x.strip().split(), include_lengths=True)
     fields = (('inp', TEXT), ('trg', TEXT))
-    train_data, dev_data, test_data = PTB.splits(fields=fields, max_len=30)
+    train_data, dev_data, test_data = PTB.splits(fields=fields)
     TEXT.build_vocab(train_data)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
