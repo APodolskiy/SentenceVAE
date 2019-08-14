@@ -72,7 +72,7 @@ if __name__ == '__main__':
         print(f"EPOCH {epoch}\n")
         # Training
         model.train()
-        for batch in tqdm(train_iter):
+        for batch in tqdm(train_iter, desc='Training'):
             iters += 1
             output = model(batch)
             loss = output['loss']
@@ -90,7 +90,7 @@ if __name__ == '__main__':
         # Validation
         model.eval()
         with torch.no_grad():
-            for batch in tqdm(dev_iter):
+            for batch in tqdm(dev_iter, desc='Validation'):
                 output = model(batch)
             metrics = model.get_metrics(reset=True)
             for metric, value in metrics.items():
