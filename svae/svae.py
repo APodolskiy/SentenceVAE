@@ -29,6 +29,7 @@ class SentenceVAE(nn.Module):
         self.eos_idx = self.vocab.stoi[EOS_TOKEN]
         # Model
         self.embedding = nn.Embedding(len(self.vocab), self.embed_dim)
+        self.embed_drop = nn.Dropout(self.params.get('embedding_drop_p', 0.0))
 
         encoder_params = params.pop('encoder')
         decoder_params = params.pop('decoder')
@@ -70,6 +71,7 @@ class SentenceVAE(nn.Module):
         trg, trg_lengths = batch.trg
         seq_len, batch_size = inp.size()
         inp_emb = self.embedding(inp)
+        inp_emb = self.embed_drop(inp_emb)
         enc = self.encoder(inp_emb, inp_lengths)
 
         mu = self.code2mu(enc)
@@ -84,6 +86,7 @@ class SentenceVAE(nn.Module):
         trg_inp, trg_out = trg[:-1], trg[1:]
         trg_inp = self.word_dropout(trg_inp)
         trg_emb = self.embedding(trg_inp)
+        trg_emb = self.embed_drop(trg_emb)
         out = self.decoder(trg_emb, trg_lengths - 1, h_init)
         logits = self.out2vocab(out)
         logp = torch.log_softmax(logits, dim=-1)

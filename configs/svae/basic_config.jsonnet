@@ -3,6 +3,7 @@ local annealing_type = 'logistic';
 {
     model: {
         embed_dim: 300,
+        embedding_drop_p: 0.25,
         latent_dim: 16,
         word_drop_p: 0.5,
         tie_weights: false,
