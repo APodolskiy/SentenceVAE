@@ -38,10 +38,17 @@ class SentenceVAE(nn.Module):
         self.code2mu = nn.Linear(params.hidden_output_size, self.latent_dim)
         self.code2sigma = nn.Linear(params.hidden_output_size, self.latent_dim)
         self.latent2hidden = nn.Linear(self.latent_dim, decoder_params.hidden_size)
-        self.out2vocab = nn.Linear(decoder_params.hidden_size, len(self.vocab))
         # Tie weights
+        self.out2vocab = nn.Sequential()
         if params.tie_weights:
-            self.out2vocab.weight = self.embedding.weight
+            project_hidden = nn.Linear(decoder_params.hidden_size, self.embed_dim)
+            out2vocab = nn.Linear(self.embed_dim, len(self.vocab))
+            out2vocab.weight = self.embedding.weight
+            self.out2vocab.add_module('projection', project_hidden)
+            self.out2vocab.add_module('out', out2vocab)
+        else:
+            out2vocab = nn.Linear(decoder_params.hidden_size, len(self.vocab))
+            self.out2vocab.add_module('out', out2vocab)
 
         self.annealing_function = LogisticAnnealing()
         self.loss_func = nn.NLLLoss(ignore_index=self.pad_idx, reduction='none')
