@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Dict
 
 import torch
 import torch.nn as nn
@@ -70,24 +70,14 @@ class SentenceVAE(nn.Module):
         inp, inp_lengths = batch.inp
         trg, trg_lengths = batch.trg
         seq_len, batch_size = inp.size()
-        inp_emb = self.embedding(inp)
-        inp_emb = self.embed_drop(inp_emb)
-        enc = self.encoder(inp_emb, inp_lengths)
 
-        mu = self.code2mu(enc)
-        log_sigma = self.code2sigma(enc)
-        kl_loss = 0.5 * torch.sum(log_sigma.exp() + mu.pow(2) - 1 - log_sigma, dim=1).mean()
+        encoder_output = self.encode(inp, inp_lengths)
+        z, kl_loss = encoder_output['code'], encoder_output['kl_loss']
         self.kl_loss_metric(kl_loss.item() * batch_size, num_steps=batch_size)
 
-        sigma = torch.exp(0.5*log_sigma)
-        z = self.sample_posterior(mu, sigma)
-        h_init = self.latent2hidden(z)
-
         trg_inp, trg_out = trg[:-1], trg[1:]
-        trg_inp = self.word_dropout(trg_inp)
-        trg_emb = self.embedding(trg_inp)
-        trg_emb = self.embed_drop(trg_emb)
-        out = self.decoder(trg_emb, trg_lengths - 1, h_init)
+        out = self.decode(z, trg_inp, trg_lengths - 1)
+
         logits = self.out2vocab(out)
         logp = torch.log_softmax(logits, dim=-1)
         logp_words = logp.transpose(0, 1).contiguous().view(-1, len(self.vocab))
@@ -105,6 +95,33 @@ class SentenceVAE(nn.Module):
             'kl_loss': kl_loss.item(),
             'kl_weight': kl_coeff
         }
+
+    def encode(self, inp: torch.Tensor, inp_lengths: torch.Tensor) -> Dict[str, torch.Tensor]:
+        _, batch_size = inp.size()
+        inp_emb = self.embedding(inp)
+        inp_emb = self.embed_drop(inp_emb)
+        enc = self.encoder(inp_emb, inp_lengths)
+
+        mu = self.code2mu(enc)
+        log_sigma = self.code2sigma(enc)
+        kl_loss = 0.5 * torch.sum(log_sigma.exp() + mu.pow(2) - 1 - log_sigma, dim=1).mean()
+
+        sigma = torch.exp(0.5 * log_sigma)
+        z = self.sample_posterior(mu, sigma)
+        return {
+            'code': z,
+            'kl_loss': kl_loss
+        }
+
+    def decode(self, latent: torch.Tensor,
+               trg_inp: torch.Tensor,
+               trg_lengths: torch.Tensor) -> torch.Tensor:
+        h_init = self.latent2hidden(latent)
+        trg_inp = self.word_dropout(trg_inp)
+        trg_emb = self.embedding(trg_inp)
+        trg_emb = self.embed_drop(trg_emb)
+        out = self.decoder(trg_emb, trg_lengths, h_init)
+        return out
 
     def sample_posterior(self, mu: torch.Tensor, sigma: torch.Tensor) -> torch.Tensor:
         eps = torch.randn_like(mu).to(sigma.device)
