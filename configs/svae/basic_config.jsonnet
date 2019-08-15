@@ -9,6 +9,7 @@ local annealing_type = 'logistic';
         tie_weights: false,
         greedy: false,
         encoder: {
+            rnn_type: 'lstm',
             input_size: $.model.embed_dim,
             hidden_size: 256,
             num_layers: 1,
@@ -16,6 +17,7 @@ local annealing_type = 'logistic';
             dropout: 0.4,
         },
         decoder: {
+            rnn_type: 'lstm',
             input_size: $.model.embed_dim,
             hidden_size: 256,
             num_layers: 1,

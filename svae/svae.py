@@ -76,7 +76,7 @@ class SentenceVAE(nn.Module):
         self.kl_loss_metric(kl_loss.item() * batch_size, num_steps=batch_size)
 
         trg_inp, trg_out = trg[:-1], trg[1:]
-        out = self.decode(z, trg_inp, trg_lengths - 1)
+        out, _ = self.decode(z, trg_inp, trg_lengths - 1)
 
         logits = self.out2vocab(out)
         logp = torch.log_softmax(logits, dim=-1)
@@ -117,6 +117,9 @@ class SentenceVAE(nn.Module):
                trg_inp: torch.Tensor,
                trg_lengths: torch.Tensor) -> torch.Tensor:
         h_init = self.latent2hidden(latent)
+        h_init = h_init.expand((self.decoder.num_layers, *h_init.size())).contiguous()
+        if self.decoder.type == 'lstm':
+            h_init = (h_init, torch.zeros_like(h_init))
         trg_inp = self.word_dropout(trg_inp)
         trg_emb = self.embedding(trg_inp)
         trg_emb = self.embed_drop(trg_emb)
@@ -154,6 +157,10 @@ class SentenceVAE(nn.Module):
         z = self.sample_prior(num_samples)
         z = z.to(device)
         hidden = self.latent2hidden(z)
+        hidden = hidden.expand((self.decoder.num_layers, *hidden.size())).contiguous()
+        if self.decoder.type == 'lstm':
+            hidden = (hidden, torch.zeros_like(hidden))
+
         done = [False] * num_samples
         lengths = torch.tensor([1]*num_samples)
 
@@ -161,8 +168,7 @@ class SentenceVAE(nn.Module):
         with torch.no_grad():
             while not all(done) and iters < max_len:
                 inp_embed = self.embedding(prev_words)
-                out = self.decoder(inp_embed, lengths, hidden)
-                hidden = out.squeeze(0)
+                out, hidden = self.decoder(inp_embed, lengths, hidden)
                 logits = self.out2vocab(out)
                 prev_words = self._sample_words(logits)
                 done = [(el[0] == self.eos_idx) and flag for el, flag in zip(prev_words, done)]
