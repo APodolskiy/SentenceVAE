@@ -101,4 +101,15 @@ if __name__ == '__main__':
         print(*samples, sep='\n')
 
     save_checkpoint(model.state_dict(), run_dir)
+
+    if params.get('eval_on_test', False):
+        print("Evaluating model on test data...")
+        model.eval()
+        with torch.no_grad():
+            for batch in tqdm(test_iter, desc='Test set evaluation'):
+                output = model(batch)
+            metrics = model.get_metrics(reset=True)
+            for metric, value in metrics.items():
+                print(f"{metric}: {value}")
+
     writer.close()

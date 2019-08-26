@@ -47,4 +47,5 @@ local annealing_type = 'logistic';
             betas: [0.9, 0.999]
         },
     },
+    eval_on_test: true
 }
