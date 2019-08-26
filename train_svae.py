@@ -12,10 +12,10 @@ import torch
 import torch.optim as optim
 from torchtext.data import Field, Iterator
 
-from rvae.dataset_utils import *
-from rvae.dataset_utils.datasets import PTB
-from rvae.rvae import RecurrentVAE
-from rvae.utils.training import save_checkpoint, Params
+from svae.dataset_utils import *
+from svae.dataset_utils.datasets import PTB
+from svae.svae import RecurrentVAE
+from svae.utils.training import save_checkpoint, Params
 
 
 if __name__ == '__main__':

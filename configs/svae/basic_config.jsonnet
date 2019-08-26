@@ -5,7 +5,7 @@ local annealing_type = 'logistic';
         embed_dim: 300,
         embedding_drop_p: 0.25,
         latent_dim: 16,
-        word_drop_p: 0.5,
+        word_drop_p: 0.38,
         tie_weights: false,
         greedy: false,
         encoder: {
@@ -39,7 +39,7 @@ local annealing_type = 'logistic';
         else {}
     },
     training: {
-        epochs: 20,
+        epochs: 50,
         batch_size: 128,
         test_batch_size: 128,
         optimizer: {

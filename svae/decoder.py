@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
-from rvae import RNN_TYPES
+from svae import RNN_TYPES
 
 
 class RNNDecoder(nn.Module):

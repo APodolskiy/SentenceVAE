@@ -4,11 +4,11 @@ import torch
 import torch.nn as nn
 from torchtext.vocab import Vocab
 
-from rvae.encoder import RNNEncoder
-from rvae.decoder import RNNDecoder
-from rvae.dataset_utils import *
-from rvae.utils.annealing import LogisticAnnealing, LinearAnnealing
-from rvae.utils.training import AverageMetric, Params
+from svae.encoder import RNNEncoder
+from svae.decoder import RNNDecoder
+from svae.dataset_utils import *
+from svae.utils.annealing import LogisticAnnealing, LinearAnnealing
+from svae.utils.training import AverageMetric, Params
 
 
 class RecurrentVAE(nn.Module):
