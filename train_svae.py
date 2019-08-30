@@ -5,6 +5,7 @@ import shutil
 from _jsonnet import evaluate_file
 from pathlib import Path
 
+import dill
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
 
@@ -47,6 +48,9 @@ if __name__ == '__main__':
     fields = (('inp', TEXT), ('trg', TEXT))
     train_data, dev_data, test_data = PTB.splits(fields=fields)
     TEXT.build_vocab(train_data)
+
+    with (run_dir / 'TEXT.Field').open("wb") as fp:
+        dill.dump(TEXT, fp)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Running on device: {device}")
