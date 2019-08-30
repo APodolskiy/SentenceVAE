@@ -76,62 +76,6 @@ class Params(MutableMapping):
 
     def __len__(self):
         return len(self.__dict__)
-    """
-    def __init__(self, params: Dict):
-        self.params = params
-
-    def pop(self, key: str, default: Any = DEFAULT_VALUE, param_type: Optional = None):
-        if default is self.DEFAULT_VALUE:
-            try:
-                value = self.params.pop(key)
-            except KeyError:
-                raise KeyError(f"Missing parameter \"{key}\"")
-        else:
-            value = self.params.pop(key, default)
-        value = self._convert_value(value)
-        if param_type is not None:
-            value = self._convert_value(value, param_type)
-        return value
-
-    def _convert_type(self, value, _type):
-        if value is None or value == 'None':
-            return None
-        if _type is bool:
-            if isinstance(value, bool):
-                return value
-            elif isinstance(value, str):
-                if value == 'false':
-                    return False
-                if value == 'true':
-                    return True
-            raise ValueError(f"Can't convert {value} to type {_type}.")
-        return _type(value)
-
-    def _convert_value(self, value):
-        if isinstance(value, dict):
-            return Params(value)
-        if isinstance(value, list):
-            value = [self._convert_value(item) for item in value]
-        return value
-
-    def __getitem__(self, key):
-        if key in self.params:
-            return self._convert_value(self.params[key])
-        else:
-            raise KeyError
-
-    def __setitem__(self, key, value):
-        self.params[key] = value
-
-    def __delitem__(self, key):
-        del self.params[key]
-
-    def __iter__(self):
-        return iter(self.params)
-
-    def __len__(self):
-        return len(self.params)
-    """
 
 
 class AggregateMetric:
