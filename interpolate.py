@@ -1,9 +1,10 @@
 from argparse import ArgumentParser
+import dill
 import json
+from pathlib import Path
 
 from _jsonnet import evaluate_file
-import dill
-from pathlib import Path
+import numpy as np
 
 import torch
 import torch.nn as nn
@@ -26,7 +27,7 @@ def encode_sentence(model: nn.Module, sentence: str,
     # batch_len x seq_len
     sentence_numerical = sentence_numerical.view(-1, 1)
     with torch.no_grad():
-        z = model.encode(sentence_numerical, torch.LongTensor([sentence_numerical.size(1)]))['code']
+        z = model.encode(sentence_numerical, torch.LongTensor([sentence_numerical.size(1)]), use_mean=True)['code']
     return z
 
 
@@ -34,11 +35,11 @@ if __name__ == '__main__':
     parser = ArgumentParser(description="Interpolation between points in latent space")
     parser.add_argument("--model-path", type=str, required=True, metavar="PATH",
                         help="Path to model data")
-    parser.add_argument("--start-sentence", type=str, required=True, metavar="TEXT",
+    parser.add_argument("--start-sentence", type=str, required=False, metavar="TEXT",
                         help="Start sentence for interpolation")
-    parser.add_argument("--end-sentence", type=str, required=True, metavar="TEXT",
+    parser.add_argument("--end-sentence", type=str, required=False, metavar="TEXT",
                         help="End sentence for interpolation")
-    parser.add_argument("--num-steps", type=int, default=10, metavar="N",
+    parser.add_argument("--num-steps", type=int, default=8, metavar="N",
                         help="Number of interpolation steps (default: 10)")
     parser.add_argument("--interpolation-type", type=str, default='linear', metavar="TYPE",
                         choices=['linear', 'spherical'], help="Interpolation type")
@@ -60,13 +61,18 @@ if __name__ == '__main__':
     model.eval()
 
     # Prepare data
-    z_1 = encode_sentence(model, args.start_sentence, TEXT, device)
-    print(model.sample(z=z_1, device=device))
-    z_2 = encode_sentence(model, args.end_sentence, TEXT, device)
-    z_1, z_2 = z_1.cpu().data.numpy(), z_2.cpu().data.numpy()
+    if args.start_sentence is None or args.end_sentence is None:
+        z_1 = np.random.randn(1, model.latent_dim)
+        z_2 = np.random.randn(1, model.latent_dim)
+    else:
+        print(f"Original sentences:\n"
+              f"Start sentence: {args.start_sentence}\n"
+              f"End sentence: {args.end_sentence}.")
+        z_1 = encode_sentence(model, args.start_sentence, TEXT, device)
+        z_2 = encode_sentence(model, args.end_sentence, TEXT, device)
+        z_1, z_2 = z_1.cpu().data.numpy(), z_2.cpu().data.numpy()
 
     z_steps = slerp(z_1, z_2, num_steps=args.num_steps)
     codes = torch.FloatTensor(z_steps)
     samples = model.sample(z=codes, device=device)
-    samples = [args.start_sentence, *samples, args.end_sentence]
     print("\n".join(samples))

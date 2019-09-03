@@ -49,9 +49,6 @@ if __name__ == '__main__':
     train_data, dev_data, test_data = PTB.splits(fields=fields)
     TEXT.build_vocab(train_data)
 
-    with (run_dir / 'TEXT.Field').open("wb") as fp:
-        dill.dump(TEXT, fp)
-
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Running on device: {device}")
 
@@ -104,6 +101,8 @@ if __name__ == '__main__':
         samples = model.sample(num_samples=10, device=device)
         print(*samples, sep='\n')
 
+    with (run_dir / 'TEXT.Field').open("wb") as fp:
+        dill.dump(TEXT, fp)
     save_checkpoint(model.state_dict(), run_dir)
 
     if params.get('eval_on_test', False):
