@@ -5,11 +5,11 @@ local annealing_type = 'logistic';
         embed_dim: 300,
         embedding_drop_p: 0.5,
         latent_dim: 16,
-        word_drop_p: 0,
+        word_drop_p: 0.3,
         tie_weights: false,
         greedy: false,
         encoder: {
-            rnn_type: 'gru',
+            rnn_type: 'lstm',
             input_size: $.model.embed_dim,
             hidden_size: 256,
             num_layers: 1,
@@ -17,7 +17,7 @@ local annealing_type = 'logistic';
             dropout: 0.4,
         },
         decoder: {
-            rnn_type: 'gru',
+            rnn_type: 'lstm',
             input_size: $.model.embed_dim,
             hidden_size: 256,
             num_layers: 1,
@@ -34,13 +34,13 @@ local annealing_type = 'logistic';
         } +
         if annealing_type == 'logistic' then{
             fast: false,
-            eps: 1e-5
+            eps: 1e-3
         }
         else {}
     },
     training: {
-        epochs: 10,
-        batch_size: 32,
+        epochs: 50,
+        batch_size: 128,
         test_batch_size: 128,
         optimizer: {
             lr: 1e-3,

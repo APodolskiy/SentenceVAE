@@ -72,7 +72,12 @@ if __name__ == '__main__':
         z_2 = encode_sentence(model, args.end_sentence, TEXT, device)
         z_1, z_2 = z_1.cpu().data.numpy(), z_2.cpu().data.numpy()
 
-    z_steps = slerp(z_1, z_2, num_steps=args.num_steps)
+    if args.interpolation_type == 'spherical':
+        z_steps = slerp(z_1, z_2, num_steps=args.num_steps)
+    elif args.interpolation_type == 'linear':
+        z_steps = lerp(z_1, z_2, num_steps=args.num_steps)
+    else:
+        raise ValueError(f"Invalid interpolation type: {args.interpolation_type}")
     codes = torch.FloatTensor(z_steps)
     samples = model.sample(z=codes, device=device)
     print("\n".join(samples))
