@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 import torch
 import torch.nn as nn
@@ -150,12 +150,20 @@ class RecurrentVAE(nn.Module):
             'kl_term': self.kl_loss_metric.get_metric(reset)
         }
 
-    def sample(self, num_samples: int, max_len: int = 60, device=torch.device('cpu')) -> List[str]:
+    def sample(self,
+               z: Optional[torch.tensor] = None,
+               num_samples: Optional[int] = None,
+               max_len: int = 60,
+               device=torch.device('cpu')) -> List[str]:
+        if z is None:
+            z = self.sample_prior(num_samples)
+        z = z.to(device)
+        num_samples = z.size(0)
+
         prev_words = torch.tensor([[self.sos_idx]*num_samples])
         prev_words = prev_words.to(device)
         gen_words = []
-        z = self.sample_prior(num_samples)
-        z = z.to(device)
+
         hidden = self.latent2hidden(z)
         hidden = hidden.expand((self.decoder.num_layers, *hidden.size())).contiguous()
         if self.decoder.type == 'lstm':
