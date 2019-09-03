@@ -96,7 +96,7 @@ class RecurrentVAE(nn.Module):
             'kl_weight': kl_coeff
         }
 
-    def encode(self, inp: torch.Tensor, inp_lengths: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def encode(self, inp: torch.Tensor, inp_lengths: torch.Tensor, use_mean: bool = False) -> Dict[str, torch.Tensor]:
         _, batch_size = inp.size()
         inp_emb = self.embedding(inp)
         inp_emb = self.embed_drop(inp_emb)
@@ -106,8 +106,11 @@ class RecurrentVAE(nn.Module):
         log_sigma = self.code2sigma(enc)
         kl_loss = 0.5 * torch.sum(log_sigma.exp() + mu.pow(2) - 1 - log_sigma, dim=1).mean()
 
-        sigma = torch.exp(0.5 * log_sigma)
-        z = self.sample_posterior(mu, sigma)
+        if not use_mean:
+            sigma = torch.exp(0.5 * log_sigma)
+            z = self.sample_posterior(mu, sigma)
+        else:
+            z = mu
         return {
             'code': z,
             'kl_loss': kl_loss
