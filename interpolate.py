@@ -13,7 +13,7 @@ from torchtext.data import Field
 from svae.svae import RecurrentVAE
 from svae.utils.training import Params
 from svae.dataset_utils import UNK_TOKEN
-from svae.utils.interpolation import slerp, lerp
+from svae.utils.interpolation import get_interpolation_function
 
 
 def encode_sentence(model: nn.Module, sentence: str,
@@ -41,8 +41,8 @@ if __name__ == '__main__':
                         help="End sentence for interpolation")
     parser.add_argument("--num-steps", type=int, default=8, metavar="N",
                         help="Number of interpolation steps (default: 10)")
-    parser.add_argument("--interpolation-type", type=str, default='linear', metavar="TYPE",
-                        choices=['linear', 'spherical'], help="Interpolation type")
+    parser.add_argument("--interpolation-type", type=str, default='lerp', metavar="TYPE",
+                        help="Interpolation type")
     args = parser.parse_args()
 
     # Load model
@@ -72,12 +72,9 @@ if __name__ == '__main__':
         z_2 = encode_sentence(model, args.end_sentence, TEXT, device)
         z_1, z_2 = z_1.cpu().data.numpy(), z_2.cpu().data.numpy()
 
-    if args.interpolation_type == 'spherical':
-        z_steps = slerp(z_1, z_2, num_steps=args.num_steps)
-    elif args.interpolation_type == 'linear':
-        z_steps = lerp(z_1, z_2, num_steps=args.num_steps)
-    else:
-        raise ValueError(f"Invalid interpolation type: {args.interpolation_type}")
+    interpolation_function = get_interpolation_function(args.interpolation_type)
+    z_steps = interpolation_function(z_1, z_2, num_steps=args.num_steps)
+
     codes = torch.FloatTensor(z_steps)
     samples = model.sample(z=codes, device=device)
     print("\n".join(samples))
