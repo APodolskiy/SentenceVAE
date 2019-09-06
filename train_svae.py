@@ -98,6 +98,7 @@ if __name__ == '__main__':
                 writer.add_scalar(f'dev/{metric}', value, epoch)
 
         for temperature in [0.1, 1., 10.]:
+            print("#" * 20)
             print(f"Sentence samples. Temperature: {temperature}")
             samples = model.sample(num_samples=10, temperature=temperature, device=device)
             print(*samples, sep='\n')
