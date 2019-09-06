@@ -197,8 +197,8 @@ class RecurrentVAE(nn.Module):
     def _sample_words(self, logits: torch.Tensor) -> torch.Tensor:
         if self.greedy:
             return torch.topk(logits, k=1, dim=-1)[1].squeeze(0)
-        logp = torch.log_softmax(logits, dim=-1)
-        idx_samples = logp.squeeze(0).exp().multinomial(1)
+        logp = torch.softmax(logits, dim=-1)
+        idx_samples = logp.squeeze(0).multinomial(1)
         return idx_samples
 
     def _idx2sentence(self, indices: List[int]) -> str:
