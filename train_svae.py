@@ -97,9 +97,10 @@ if __name__ == '__main__':
             for metric, value in metrics.items():
                 writer.add_scalar(f'dev/{metric}', value, epoch)
 
-        print("Sentence samples.")
-        samples = model.sample(num_samples=10, device=device)
-        print(*samples, sep='\n')
+        for temperature in [0.1, 1., 10.]:
+            print(f"Sentence samples. Temperature: {temperature}")
+            samples = model.sample(num_samples=10, temperature=temperature, device=device)
+            print(*samples, sep='\n')
 
     with (run_dir / 'TEXT.Field').open("wb") as fp:
         dill.dump(TEXT, fp)

@@ -157,6 +157,7 @@ class RecurrentVAE(nn.Module):
                z: Optional[torch.tensor] = None,
                num_samples: Optional[int] = None,
                max_len: int = 60,
+               temperature: float = 1.,
                device=torch.device('cpu')) -> List[str]:
         if z is None:
             z = self.sample_prior(num_samples)
@@ -181,6 +182,8 @@ class RecurrentVAE(nn.Module):
                 inp_embed = self.embedding(prev_words)
                 out, hidden = self.decoder(inp_embed, lengths, hidden)
                 logits = self.out2vocab(out)
+                if temperature != 1.:
+                    logits.div_(temperature)
                 prev_words = self._sample_words(logits)
                 done = [(el[0] == self.eos_idx) and flag for el, flag in zip(prev_words, done)]
                 prev_words = prev_words.t()
