@@ -14,7 +14,7 @@ import torch.optim as optim
 from torchtext.data import Field, Iterator
 
 from svae.dataset_utils import *
-from svae.dataset_utils.datasets import PTB
+from svae.dataset_utils.datasets import PTB, YelpReview
 from svae.svae import RecurrentVAE
 from svae.utils.training import save_checkpoint, Params
 
@@ -40,14 +40,31 @@ if __name__ == '__main__':
     config = json.loads(evaluate_file(args.config))
     params = Params(config)
     training_params = params.pop('training')
+    dataset_params = params.pop('dataset')
 
-    TEXT = Field(sequential=True, use_vocab=True, lower=True,
-                 init_token=SOS_TOKEN, eos_token=EOS_TOKEN,
-                 pad_token=PAD_TOKEN, unk_token=UNK_TOKEN,
-                 tokenize=lambda x: x.strip().split(), include_lengths=True)
-    fields = (('inp', TEXT), ('trg', TEXT))
-    train_data, dev_data, test_data = PTB.splits(fields=fields)
-    TEXT.build_vocab(train_data)
+    dataset_name = dataset_params.pop('name', "PTB")
+    # TODO: unify datasets creation
+    if dataset_name == "PTB":
+        TEXT = Field(sequential=True, use_vocab=True, lower=True,
+                     init_token=SOS_TOKEN, eos_token=EOS_TOKEN,
+                     pad_token=PAD_TOKEN, unk_token=UNK_TOKEN,
+                     tokenize=lambda x: x.strip().split(), include_lengths=True)
+        fields = (('inp', TEXT), ('trg', TEXT))
+        train_data, dev_data, test_data = PTB.splits(fields=fields)
+    elif dataset_name == "YelpReview":
+        TEXT = Field(sequential=True, use_vocab=True, lower=True,
+                     init_token=SOS_TOKEN, eos_token=EOS_TOKEN,
+                     pad_token=PAD_TOKEN, unk_token=UNK_TOKEN,
+                     tokenize="spacy", include_lengths=True)
+        fields = (('inp', TEXT), ('trg', TEXT))
+        train_data, dev_data, test_data = YelpReview.splits(fields=fields,
+                                                            num_samples=120_000,
+                                                            split_ratio=[100_000, 10_000, 10_000],
+                                                            max_len=90)
+    else:
+        raise ValueError(f"Dataset {dataset_name} is not supported!")
+
+    TEXT.build_vocab(train_data, max_size=20_000)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Running on device: {device}")

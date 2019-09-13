@@ -123,3 +123,5 @@ ENV/
 # Data folder
 /data
 /runs
+/configs
+!/configs/svae/basic_config.jsonnet
