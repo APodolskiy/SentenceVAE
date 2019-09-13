@@ -80,10 +80,11 @@ class YelpReview(Dataset):
                add_cls: bool = False,
                random_state: int = 162,
                **kwargs):
-        path = os.path.join(root, cls.name)
+        path = os.path.join(root, cls.name, 'train.csv')
         full_dataset = YelpReview(path=path, fields=fields, num_samples=num_samples,
                                   add_cls=add_cls, random_state=random_state)
-        full_dataset.split(split_ratio=split_ratio, stratified=stratified, strata_field=strata_field)
+        splitted_data = full_dataset.split(split_ratio=split_ratio, stratified=stratified, strata_field=strata_field)
+        return splitted_data
 
 
 if __name__ == '__main__':
