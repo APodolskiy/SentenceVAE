@@ -42,8 +42,21 @@ class LinearAnnealing(Annealing):
     """
     Linear annealing function
     """
+    def __init__(self,
+                 max_value: float = 1.0,
+                 steps: int = 5000,
+                 warm_up_steps: int = 0,
+                 start_value: float = 0.
+                 ):
+        super(LinearAnnealing, self).__init__(max_value=max_value,
+                                              steps=steps,
+                                              warm_up_steps=warm_up_steps)
+        if not start_value >= 0.:
+            raise ValueError(f"Start value should be non-negative.")
+        self.start_value = start_value
+
     def _func(self, x: int) -> float:
-        return self.max_value * x / self.steps
+        return (self.max_value - self.start_value) * x / self.steps + self.start_value
 
 
 class LogisticAnnealing(Annealing):
