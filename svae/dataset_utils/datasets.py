@@ -2,7 +2,6 @@ import os
 import random
 from typing import Optional, Sequence, Tuple, Union, List
 
-from torchtext.data.dataset import check_split_ratio
 from tqdm import tqdm
 
 from torchtext.utils import unicode_csv_reader
@@ -53,12 +52,15 @@ class YelpReview(Dataset):
                  num_samples: Optional[int] = None,
                  add_cls: bool = False,
                  random_state: int = 162,
+                 max_len: Optional[int] = None,
                  **kwargs):
         with open(path, 'r', encoding='utf-8') as fp:
             all_data = []
             reader = unicode_csv_reader(fp)
             for row in reader:
                 cls, text = row[0], row[1]
+                if len(text.split()) > max_len:
+                    continue
                 data = (text, text, cls) if add_cls else (text, text)
                 all_data.append(data)
         if num_samples is not None and num_samples < len(all_data):
@@ -79,10 +81,11 @@ class YelpReview(Dataset):
                num_samples: Optional[int] = None,
                add_cls: bool = False,
                random_state: int = 162,
+               max_len: Optional[int] = None,
                **kwargs):
         path = os.path.join(root, cls.name, 'train.csv')
         full_dataset = YelpReview(path=path, fields=fields, num_samples=num_samples,
-                                  add_cls=add_cls, random_state=random_state)
+                                  add_cls=add_cls, random_state=random_state, max_len=max_len, **kwargs)
         splitted_data = full_dataset.split(split_ratio=split_ratio, stratified=stratified, strata_field=strata_field)
         return splitted_data
 
