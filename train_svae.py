@@ -44,7 +44,7 @@ if __name__ == '__main__':
     sampling_params = params.pop('sampling')
     sampling_temperatures = sampling_params.get('temperature', [1.0])
     if isinstance(sampling_temperatures, (int, float)):
-        sampling_temperature = [sampling_temperatures]
+        sampling_temperatures = [sampling_temperatures]
 
     dataset_name = dataset_params.pop('name', "PTB")
     # TODO: unify datasets creation
