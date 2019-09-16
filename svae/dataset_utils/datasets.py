@@ -1,5 +1,6 @@
 import os
 import random
+import re
 from typing import Optional, Sequence, Tuple, Union, List
 
 from tqdm import tqdm
@@ -54,6 +55,7 @@ class YelpReview(Dataset):
                  random_state: int = 162,
                  max_len: Optional[int] = None,
                  **kwargs):
+        duplicate_spaces_re = re.compile(r' +')
         with open(path, 'r', encoding='utf-8') as fp:
             all_data = []
             reader = unicode_csv_reader(fp)
@@ -61,6 +63,8 @@ class YelpReview(Dataset):
                 cls, text = row[0], row[1]
                 if max_len is not None and len(text.split()) > max_len:
                     continue
+                text = text.replace('\\n', '\n')
+                text = duplicate_spaces_re.sub(' ', text)
                 data = (text, text, cls) if add_cls else (text, text)
                 all_data.append(data)
         if num_samples is not None and num_samples < len(all_data):
