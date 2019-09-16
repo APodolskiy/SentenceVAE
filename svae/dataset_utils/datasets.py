@@ -59,7 +59,7 @@ class YelpReview(Dataset):
             reader = unicode_csv_reader(fp)
             for row in reader:
                 cls, text = row[0], row[1]
-                if len(text.split()) > max_len:
+                if max_len is not None and len(text.split()) > max_len:
                     continue
                 data = (text, text, cls) if add_cls else (text, text)
                 all_data.append(data)
