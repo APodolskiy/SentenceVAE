@@ -121,7 +121,10 @@ if __name__ == '__main__':
         for temperature in sampling_temperatures:
             print("#" * 20)
             print(f"Sentence samples. Temperature: {temperature}")
-            samples = model.sample(num_samples=10, temperature=temperature, device=device)
+            samples = model.sample(num_samples=10,
+                                   temperature=temperature,
+                                   device=device,
+                                   max_len=sampling_params.get('max_len', 50))
             print(*samples, sep='\n')
 
     with (run_dir / 'TEXT.Field').open("wb") as fp:
