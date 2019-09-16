@@ -47,6 +47,9 @@ local annealing_type = 'logistic';
             betas: [0.9, 0.999]
         },
     },
+    sampling: {
+        temperature: [0.1, 0.8],
+    },
     eval_on_test: true,
     dataset: {
         name: "PTB"

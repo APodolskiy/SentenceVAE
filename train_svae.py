@@ -41,6 +41,10 @@ if __name__ == '__main__':
     params = Params(config)
     training_params = params.pop('training')
     dataset_params = params.pop('dataset')
+    sampling_params = params.pop('sampling')
+    sampling_temperatures = sampling_params.get('temperature', [1.0])
+    if isinstance(sampling_temperatures, (int, float)):
+        temperature = [sampling_temperatures]
 
     dataset_name = dataset_params.pop('name', "PTB")
     # TODO: unify datasets creation
@@ -114,7 +118,7 @@ if __name__ == '__main__':
             for metric, value in metrics.items():
                 writer.add_scalar(f'dev/{metric}', value, epoch)
 
-        for temperature in [0.1, 1., 10.]:
+        for temperature in sampling_temperatures:
             print("#" * 20)
             print(f"Sentence samples. Temperature: {temperature}")
             samples = model.sample(num_samples=10, temperature=temperature, device=device)
