@@ -44,7 +44,7 @@ if __name__ == '__main__':
     sampling_params = params.pop('sampling')
     sampling_temperatures = sampling_params.get('temperature', [1.0])
     if isinstance(sampling_temperatures, (int, float)):
-        temperature = [sampling_temperatures]
+        sampling_temperature = [sampling_temperatures]
 
     dataset_name = dataset_params.pop('name', "PTB")
     # TODO: unify datasets creation
@@ -64,7 +64,7 @@ if __name__ == '__main__':
         train_data, dev_data, test_data = YelpReview.splits(fields=fields,
                                                             num_samples=120_000,
                                                             split_ratio=[100_000, 10_000, 10_000],
-                                                            max_len=90)
+                                                            max_len=150)
     else:
         raise ValueError(f"Dataset {dataset_name} is not supported!")
 
