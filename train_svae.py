@@ -16,6 +16,7 @@ from torchtext.data import Field, Iterator
 from svae.dataset_utils import *
 from svae.dataset_utils.datasets import PTB, YelpReview
 from svae.svae import RecurrentVAE
+from svae.utils.scheduler import WarmUpDecayLR
 from svae.utils.training import save_checkpoint, Params
 
 
@@ -88,6 +89,11 @@ if __name__ == '__main__':
     model.to(device)
     optimizer = optim.Adam(params=model.parameters(), **training_params.pop('optimizer'))
 
+    scheduler = None
+    scheduler_params = training_params.pop('lr_scheduler', None)
+    if scheduler_params is not None:
+        scheduler = WarmUpDecayLR(optimizer=optimizer, **scheduler_params)
+
     iters = 0
     for epoch in range(training_params.epochs):
         print("#"*20)
@@ -126,6 +132,8 @@ if __name__ == '__main__':
                                    device=device,
                                    max_len=sampling_params.get('max_len', 50))
             print(*samples, sep='\n')
+        if scheduler_params is not None:
+            scheduler.step()
 
     with (run_dir / 'TEXT.Field').open("wb") as fp:
         dill.dump(TEXT, fp)
