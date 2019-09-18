@@ -5,9 +5,12 @@ from torch.optim.lr_scheduler import _LRScheduler
 
 
 # TODO: flexible learning rate decay for each parameter group
-class DecayLR(_LRScheduler):
+from typing import List
+
+
+class WarmUpDecayLR(_LRScheduler):
     def __init__(self, optimizer: Optimizer, start_epoch: int, decay_interval: int = 1,
-                 lr_multiplier: float = 0.1, last_epoch: int = -1):
+                 lr_multiplier: float = 0.5, last_epoch: int = -1):
         self.optimizer = optimizer
         if not lr_multiplier > 0:
             raise ValueError(f"LR multiplier must be positive.")
@@ -27,9 +30,9 @@ class DecayLR(_LRScheduler):
     def load_state_dict(self, state_dict: dict) -> None:
         self.__dict__.update(state_dict)
 
-    def get_lr(self) -> float:
+    def get_lr(self) -> List[float]:
         if self.start_epoch > self.last_epoch:
             return self.base_lrs
         deg = int(math.ceil((self.last_epoch - self.start_epoch + 1) / self.decay_interval))
-        denom = 2 ** deg
-        return [base_lr / denom for base_lr in self.base_lrs]
+        multiplier = self.lr_multiplier ** deg
+        return [base_lr * multiplier for base_lr in self.base_lrs]
