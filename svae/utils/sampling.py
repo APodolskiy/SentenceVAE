@@ -49,4 +49,28 @@ class TopPSampler(Sampler):
         self.top_p = top_p
 
     def __call__(self, logits: torch.Tensor) -> torch.Tensor:
-        pass
+        logits = self._apply_temperature(logits)
+        probs = logits.softmax(dim=-1)
+        sorted_probs, sorted_indexes = probs.sort(dim=-1, descending=True)
+        cumsum_probs = sorted_probs.cumsum(dim=-1)
+        mask = cumsum_probs.lt(self.top_p)
+        # add one more element to exceed top_p
+        cumsum_mask = mask.cumsum(dim=-1)
+        last_index = cumsum_mask[:, -1:]
+        last_index.clamp_(0, mask.size(-1) - 1)
+        mask.scatter_(-1, last_index, 1)
+
+        # truncate elements
+        trunc_dim = last_index.max()
+        trunc_mask = mask[:, :trunc_dim + 1]
+        trunc_probs = sorted_probs[:, :trunc_dim + 1]
+        trunc_indexes = sorted_indexes[:, :trunc_dim + 1]
+
+        # remove words that aren't in the mask
+        words_to_remove = ~trunc_mask
+        trunc_probs.masked_fill_(mask=words_to_remove, value=0.)
+
+        # sample words
+        indexes = trunc_probs.multinomial(num_samples=1)
+        sampled_indexes = torch.gather(trunc_indexes, dim=-1, index=indexes)
+        return sampled_indexes
