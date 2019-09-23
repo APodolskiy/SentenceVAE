@@ -26,6 +26,8 @@ if __name__ == '__main__':
                         help="Path to a configuration file.")
     parser.add_argument("--run-dir", type=str, required=True, metavar='PATH',
                         help="Path to a directory where model checkpoints will be stored.")
+    parser.add_argument("--compute-bert-score", action='store_true',
+                        help="Whether to compute BERT score.")
     parser.add_argument("--force", action='store_true',
                         help="Whether to rewrite data if run directory already exists.")
     args = parser.parse_args()
