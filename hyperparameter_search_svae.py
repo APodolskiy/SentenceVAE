@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional
 
 from sklearn.model_selection import ParameterGrid
 
@@ -31,6 +31,12 @@ def hyperparameter_search(save_dir: str, experiment_name: str):
 def log_params(client: MlflowClient, run: mlflow.entities.Run, params: Dict):
     for key, value in params.items():
         client.log_param(run_id=run.info.run_uuid, key=key, value=value)
+
+
+def log_metrics(client: MlflowClient, run: mlflow.entities.Run,
+                metrics: Dict, step: Optional[int] = None):
+    for key, value in metrics.items():
+        client.log_metric(run_id=run.info.run_uuid, key=key, value=value, step=step)
 
 
 if __name__ == '__main__':
