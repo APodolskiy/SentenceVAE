@@ -20,28 +20,9 @@ from svae.utils.scheduler import WarmUpDecayLR
 from svae.utils.training import save_checkpoint, Params
 
 
-if __name__ == '__main__':
-    parser = ArgumentParser(description="Training of Sentence VAE")
-    parser.add_argument("--config", type=str, required=True, metavar='PATH',
-                        help="Path to a configuration file.")
-    parser.add_argument("--run-dir", type=str, required=True, metavar='PATH',
-                        help="Path to a directory where model checkpoints will be stored.")
-    parser.add_argument("--compute-bert-score", action='store_true',
-                        help="Whether to compute BERT score.")
-    parser.add_argument("--force", action='store_true',
-                        help="Whether to rewrite data if run directory already exists.")
-    args = parser.parse_args()
+def train(train_dir: Path, params: Params):
+    writer = SummaryWriter(logdir=str(train_dir))
 
-    run_dir = Path(args.run_dir)
-    if run_dir.exists() and args.force:
-        shutil.rmtree(run_dir)
-    run_dir.mkdir(parents=True, exist_ok=False)
-
-    writer = SummaryWriter(logdir=str(run_dir))
-
-    shutil.copyfile(args.config, run_dir / f"config.jsonnet")
-    config = json.loads(evaluate_file(args.config))
-    params = Params(config)
     training_params = params.pop('training')
     dataset_params = params.pop('dataset')
     sampling_params = params.pop('sampling')
@@ -98,7 +79,7 @@ if __name__ == '__main__':
 
     iters = 0
     for epoch in range(training_params.epochs):
-        print("#"*20)
+        print("#" * 20)
         print(f"EPOCH {epoch}\n")
         # Training
         model.train()
@@ -137,9 +118,9 @@ if __name__ == '__main__':
         if scheduler_params is not None:
             scheduler.step()
 
-    with (run_dir / 'TEXT.Field').open("wb") as fp:
+    with (train_dir / 'TEXT.Field').open("wb") as fp:
         dill.dump(TEXT, fp)
-    save_checkpoint(model.state_dict(), run_dir)
+    save_checkpoint(model.state_dict(), train_dir)
 
     if params.get('eval_on_test', False):
         print("Evaluating model on test data...")
@@ -152,3 +133,27 @@ if __name__ == '__main__':
                 print(f"{metric}: {value}")
 
     writer.close()
+
+
+if __name__ == '__main__':
+    parser = ArgumentParser(description="Training of Sentence VAE")
+    parser.add_argument("--config", type=str, required=True, metavar='PATH',
+                        help="Path to a configuration file.")
+    parser.add_argument("--run-dir", type=str, required=True, metavar='PATH',
+                        help="Path to a directory where model checkpoints will be stored.")
+    parser.add_argument("--compute-bert-score", action='store_true',
+                        help="Whether to compute BERT score.")
+    parser.add_argument("--force", action='store_true',
+                        help="Whether to rewrite data if run directory already exists.")
+    args = parser.parse_args()
+
+    run_dir = Path(args.run_dir)
+    if run_dir.exists() and args.force:
+        shutil.rmtree(run_dir)
+    run_dir.mkdir(parents=True, exist_ok=False)
+
+    shutil.copyfile(args.config, run_dir / f"config.jsonnet")
+    config = json.loads(evaluate_file(args.config))
+    parameters = Params(config)
+
+    train(run_dir, parameters)
