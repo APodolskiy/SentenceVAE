@@ -1,5 +1,6 @@
 from argparse import ArgumentParser
 import json
+from pprint import pprint
 import shutil
 from typing import Dict, Optional, Callable
 
@@ -31,6 +32,8 @@ def train(train_dir: str, config: Dict, force: bool = False, metric_logger: Opti
     with params_file.open('w') as fp:
         json.dump(config, fp)
     params = Params(config)
+    pprint(f"Config:")
+    pprint(config)
 
     writer = SummaryWriter(logdir=str(train_dir))
 
