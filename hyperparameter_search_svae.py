@@ -20,7 +20,6 @@ def hyperparameter_search(save_dir: str, experiment_name: str, params_file: str,
     # Creating client
     save_dir = Path(save_dir)
     mlflow.set_tracking_uri(str(save_dir))
-    save_dir.mkdir(parents=True)
     mlflow_client = MlflowClient(tracking_uri=str(save_dir))
     # Getting experiment
     experiment = mlflow_client.get_experiment_by_name(experiment_name)
@@ -43,7 +42,7 @@ def hyperparameter_search(save_dir: str, experiment_name: str, params_file: str,
         override_params = {k: json.dumps(param) for k, param in h_params.items()}
 
         with open(params_file) as fp:
-            params = json.loads(evaluate_snippet('config', fp.read, tla_codes=override_params))
+            params = json.loads(evaluate_snippet('config', fp.read(), tla_codes=override_params))
 
         # Creating run under the specified experiment
         run: mlflow.entities.Run = mlflow_client.create_run(experiment_id=experiment_id)
