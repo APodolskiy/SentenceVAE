@@ -1,6 +1,7 @@
 from argparse import ArgumentParser
 import json
 import shutil
+from typing import Dict, Optional, Callable
 
 from _jsonnet import evaluate_file
 from pathlib import Path
@@ -20,7 +21,17 @@ from svae.utils.scheduler import WarmUpDecayLR
 from svae.utils.training import save_checkpoint, Params
 
 
-def train(train_dir: Path, params: Params):
+def train(train_dir: str, config: Dict, force: bool = False, metric_logger: Optional[Callable] = None):
+    train_dir = Path(train_dir)
+    if train_dir.exists() and force:
+        shutil.rmtree(train_dir)
+    train_dir.mkdir(parents=True, exist_ok=False)
+
+    params_file = train_dir / f"config.jsonnet"
+    with params_file.open('w') as fp:
+        json.dump(config, fp)
+    params = Params(config)
+
     writer = SummaryWriter(logdir=str(train_dir))
 
     training_params = params.pop('training')
@@ -77,6 +88,8 @@ def train(train_dir: Path, params: Params):
     if scheduler_params is not None:
         scheduler = WarmUpDecayLR(optimizer=optimizer, **scheduler_params)
 
+    valid_metrics, test_metrics = None, None
+
     iters = 0
     for epoch in range(training_params.epochs):
         print("#" * 20)
@@ -98,14 +111,18 @@ def train(train_dir: Path, params: Params):
         metrics = model.get_metrics(reset=True)
         for metric, value in metrics.items():
             writer.add_scalar(f'train/{metric}', value, epoch)
+        if metric_logger is not None:
+            metric_logger(metrics, epoch)
         # Validation
         model.eval()
         with torch.no_grad():
             for batch in tqdm(dev_iter, desc='Validation'):
-                output = model(batch)
-            metrics = model.get_metrics(reset=True)
-            for metric, value in metrics.items():
+                _ = model(batch)
+            valid_metrics = model.get_metrics(reset=True)
+            for metric, value in valid_metrics.items():
                 writer.add_scalar(f'dev/{metric}', value, epoch)
+            if metric_logger is not None:
+                metric_logger(valid_metrics, epoch)
 
         for temperature in sampling_temperatures:
             print("#" * 20)
@@ -127,10 +144,12 @@ def train(train_dir: Path, params: Params):
         model.eval()
         with torch.no_grad():
             for batch in tqdm(test_iter, desc='Test set evaluation'):
-                output = model(batch)
-            metrics = model.get_metrics(reset=True)
-            for metric, value in metrics.items():
+                _ = model(batch)
+            test_metrics = model.get_metrics(reset=True)
+            for metric, value in test_metrics.items():
                 print(f"{metric}: {value}")
+            if metric_logger is not None:
+                metric_logger(test_metrics)
 
     writer.close()
 
@@ -141,19 +160,9 @@ if __name__ == '__main__':
                         help="Path to a configuration file.")
     parser.add_argument("--run-dir", type=str, required=True, metavar='PATH',
                         help="Path to a directory where model checkpoints will be stored.")
-    parser.add_argument("--compute-bert-score", action='store_true',
-                        help="Whether to compute BERT score.")
     parser.add_argument("--force", action='store_true',
                         help="Whether to rewrite data if run directory already exists.")
     args = parser.parse_args()
 
-    run_dir = Path(args.run_dir)
-    if run_dir.exists() and args.force:
-        shutil.rmtree(run_dir)
-    run_dir.mkdir(parents=True, exist_ok=False)
-
-    shutil.copyfile(args.config, run_dir / f"config.jsonnet")
     config = json.loads(evaluate_file(args.config))
-    parameters = Params(config)
-
-    train(run_dir, parameters)
+    train(args.run_dir, args.config, args.force)
