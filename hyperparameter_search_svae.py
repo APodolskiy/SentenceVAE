@@ -82,5 +82,5 @@ if __name__ == '__main__':
 
     hyperparameter_search(save_dir=args.tracking_uri,
                           experiment_name=args.experiment_name,
-                          params=args.params,
-                          hyper_params=args.hyper_params)
+                          params_file=args.params,
+                          hyper_params_file=args.hyper_params)
