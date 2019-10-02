@@ -3,16 +3,17 @@ from functools import partial
 import json
 from pathlib import Path
 import tempfile
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple, Union
 
+import git
 from _jsonnet import evaluate_snippet
 from sklearn.model_selection import ParameterGrid
 
 import mlflow
 from mlflow.entities import Run
 from mlflow.tracking.client import MlflowClient
+from mlflow.utils.mlflow_tags import MLFLOW_GIT_COMMIT, MLFLOW_GIT_BRANCH
 
-from svae.utils.training import Params
 from train_svae import train
 
 
@@ -37,7 +38,9 @@ def hyperparameter_search(save_dir: str, experiment_name: str, params_file: str,
         raise ValueError(f"Currently only grid search is being supported.")
 
     hyper_params_grid = ParameterGrid(hyper_params)
+    git_info = get_git_info(Path.cwd())
 
+    # TODO: parallelize hyperparameter search on multiple GPUs
     for h_params in hyper_params_grid:
         override_params = {k: json.dumps(param) for k, param in h_params.items()}
 
@@ -45,15 +48,23 @@ def hyperparameter_search(save_dir: str, experiment_name: str, params_file: str,
             params = json.loads(evaluate_snippet('config', fp.read(), tla_codes=override_params))
 
         # Creating run under the specified experiment
-        run: mlflow.entities.Run = mlflow_client.create_run(experiment_id=experiment_id)
+        tags = None
+        if git_info is not None:
+            tags = {key: value for key, value in zip([MLFLOW_GIT_COMMIT, MLFLOW_GIT_BRANCH], git_info)}
+        run: mlflow.entities.Run = mlflow_client.create_run(experiment_id=experiment_id, tags=tags)
+        log_params(mlflow_client, run, h_params)
         train_dir = tempfile.mkdtemp()
-        train(train_dir=train_dir,
-              config=params,
-              force=True,
-              metric_logger=partial(log_metrics, mlflow_client, run))
-
-        mlflow_client.log_artifacts(run.info.run_uuid, train_dir)
-        mlflow_client.set_terminated(run.info.run_uuid)
+        status = None
+        try:
+            train(train_dir=train_dir,
+                  config=params,
+                  force=True,
+                  metric_logger=partial(log_metrics, mlflow_client, run))
+            mlflow_client.log_artifacts(run.info.run_uuid, train_dir)
+        except Exception as e:
+            print(f"Run failed! Exception occurred: {e}.")
+            status = 'FAILED'
+        mlflow_client.set_terminated(run.info.run_uuid, status=status)
 
 
 def log_params(client: MlflowClient, run: mlflow.entities.Run, params: Dict):
@@ -65,6 +76,26 @@ def log_metrics(client: MlflowClient, run: mlflow.entities.Run,
                 metrics: Dict, step: Optional[int] = None):
     for key, value in metrics.items():
         client.log_metric(run_id=run.info.run_uuid, key=key, value=value, step=step)
+
+
+def get_git_info(path: Union[str, Path]) -> Optional[Tuple[str, str]]:
+    """
+    Mainly adaptation of mlflow.utils.context _get_git_commit function.
+    :param path:
+    :return:
+    """
+    path = Path(path)
+    if not path.exists():
+        return None
+    if path.is_file():
+        path = path.parent
+    try:
+        repo = git.Repo(path)
+        commit = repo.head.commit.hexsha
+        branch = repo.active_branch.name
+        return commit, branch
+    except (git.InvalidGitRepositoryError, git.GitCommandNotFound, ValueError, git.NoSuchPathError):
+        return None
 
 
 if __name__ == '__main__':
