@@ -91,8 +91,6 @@ def train(train_dir: str, config: Dict, force: bool = False, metric_logger: Opti
     if scheduler_params is not None:
         scheduler = WarmUpDecayLR(optimizer=optimizer, **scheduler_params)
 
-    valid_metrics, test_metrics = None, None
-
     iters = 0
     for epoch in range(training_params.epochs):
         print("#" * 20)
@@ -115,7 +113,7 @@ def train(train_dir: str, config: Dict, force: bool = False, metric_logger: Opti
         for metric, value in metrics.items():
             writer.add_scalar(f'train/{metric}', value, epoch)
         if metric_logger is not None:
-            metric_logger(metrics, epoch)
+            metric_logger({f"train_{key}": value for key, value in metrics.items()}, epoch)
         # Validation
         model.eval()
         with torch.no_grad():
@@ -125,7 +123,7 @@ def train(train_dir: str, config: Dict, force: bool = False, metric_logger: Opti
             for metric, value in valid_metrics.items():
                 writer.add_scalar(f'dev/{metric}', value, epoch)
             if metric_logger is not None:
-                metric_logger(valid_metrics, epoch)
+                metric_logger({f"valid_{key}": value for key, value in valid_metrics.items()}, epoch)
 
         for temperature in sampling_temperatures:
             print("#" * 20)
