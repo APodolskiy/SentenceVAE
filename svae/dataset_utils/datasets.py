@@ -63,7 +63,7 @@ class YelpReview(Dataset):
                 cls, text = row[0], row[1]
                 if max_len is not None and len(text.split()) > max_len:
                     continue
-                text = text.replace('\\n', '\n')
+                text = text.replace('\\n\\n', '\\n')
                 text = duplicate_spaces_re.sub(' ', text)
                 data = (text, text, cls) if add_cls else (text, text)
                 all_data.append(data)
