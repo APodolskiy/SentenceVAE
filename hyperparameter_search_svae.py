@@ -53,14 +53,14 @@ def hyperparameter_search(save_dir: str, experiment_name: str, params_file: str,
             tags = {key: value for key, value in zip([MLFLOW_GIT_COMMIT, MLFLOW_GIT_BRANCH], git_info)}
         run: mlflow.entities.Run = mlflow_client.create_run(experiment_id=experiment_id, tags=tags)
         log_params(mlflow_client, run, h_params)
-        train_dir = tempfile.mkdtemp()
         status = None
         try:
-            train(train_dir=train_dir,
-                  config=params,
-                  force=True,
-                  metric_logger=partial(log_metrics, mlflow_client, run))
-            mlflow_client.log_artifacts(run.info.run_uuid, train_dir)
+            with tempfile.TemporaryDirectory() as train_dir:
+                train(train_dir=train_dir,
+                      config=params,
+                      force=True,
+                      metric_logger=partial(log_metrics, mlflow_client, run))
+                mlflow_client.log_artifacts(run.info.run_uuid, train_dir)
         except Exception as e:
             print(f"Run failed! Exception occurred: {e}.")
             status = 'FAILED'
