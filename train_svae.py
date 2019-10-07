@@ -166,4 +166,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     config = json.loads(evaluate_file(args.config))
-    train(args.run_dir, args.config, args.force)
+    train(args.run_dir, config, args.force)
