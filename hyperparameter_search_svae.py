@@ -8,6 +8,8 @@ from typing import Dict, Optional, Tuple, Union
 import git
 from _jsonnet import evaluate_snippet
 from sklearn.model_selection import ParameterGrid
+import torch
+import torch.multiprocessing as mp
 
 import mlflow
 from mlflow.entities import Run
@@ -15,6 +17,11 @@ from mlflow.tracking.client import MlflowClient
 from mlflow.utils.mlflow_tags import MLFLOW_GIT_COMMIT, MLFLOW_GIT_BRANCH
 
 from train_svae import train
+
+try:
+    mp.set_start_method('spawn')
+except RuntimeError:
+    pass
 
 
 def hyperparameter_search(save_dir: str, experiment_name: str, params_file: str, hyper_params_file: str):
@@ -40,7 +47,29 @@ def hyperparameter_search(save_dir: str, experiment_name: str, params_file: str,
     hyper_params_grid = ParameterGrid(hyper_params)
     git_info = get_git_info(Path.cwd())
 
+    # Prepare devices
+    devices_queue = mp.Queue()
+    cuda_devices = hyper_params.pop('cuda_devices', None)
+
+    if cuda_devices is not None:
+        num_devices = len(cuda_devices)
+        for gpu_id in cuda_devices:
+            devices_queue.put(torch.device(f'cuda:{gpu_id}'))
+    else:
+        devices_queue.put(torch.device('cpu'))
+        num_devices = 1
+
+    pool = mp.Pool(processes=num_devices, initializer=init, initargs=(devices_queue,))
+    pool.map(partial(run_experiment,
+                     params_file=params_file,
+                     git_info=git_info,
+                     mlflow_client=mlflow_client,
+                     experiment_id=experiment_id), hyper_params_grid)
+    pool.close()
+    pool.join()
+
     # TODO: parallelize hyperparameter search on multiple GPUs
+    """
     for h_params in hyper_params_grid:
         override_params = {k: json.dumps(param) for k, param in h_params.items()}
 
@@ -65,6 +94,44 @@ def hyperparameter_search(save_dir: str, experiment_name: str, params_file: str,
             print(f"Run failed! Exception occurred: {e}.")
             status = 'FAILED'
         mlflow_client.set_terminated(run.info.run_uuid, status=status)
+    """
+
+
+def init(local_devices_queue):
+    global global_devices_queue
+    global_devices_queue = local_devices_queue
+
+
+def run_experiment(h_params: Dict, params_file, git_info, mlflow_client, experiment_id):
+    device = global_devices_queue.get()
+    try:
+        override_params = {k: json.dumps(param) for k, param in h_params.items()}
+
+        with open(params_file) as fp:
+            params = json.loads(evaluate_snippet('config', fp.read(), tla_codes=override_params))
+
+        # Creating run under the specified experiment
+        tags = None
+        if git_info is not None:
+            tags = {key: value for key, value in zip([MLFLOW_GIT_COMMIT, MLFLOW_GIT_BRANCH], git_info)}
+        run: mlflow.entities.Run = mlflow_client.create_run(experiment_id=experiment_id, tags=tags)
+        log_params(mlflow_client, run, h_params)
+        status = None
+        try:
+            with tempfile.TemporaryDirectory() as train_dir:
+                train(train_dir=train_dir,
+                      config=params,
+                      force=True,
+                      metric_logger=partial(log_metrics, mlflow_client, run),
+                      device=device,
+                      verbose=False)
+                mlflow_client.log_artifacts(run.info.run_uuid, train_dir)
+        except Exception as e:
+            print(f"Run failed! Exception occurred: {e}.")
+            status = 'FAILED'
+        mlflow_client.set_terminated(run.info.run_uuid, status=status)
+    finally:
+        global_devices_queue.put(device)
 
 
 def log_params(client: MlflowClient, run: mlflow.entities.Run, params: Dict):

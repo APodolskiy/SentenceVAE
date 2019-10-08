@@ -46,6 +46,7 @@ local annealing_type = 'logistic';
             lr: 1e-3,
             betas: [0.9, 0.999]
         },
+        cuda_device: 0,
     },
     sampling: {
         temperature: [0.1, 0.8],
