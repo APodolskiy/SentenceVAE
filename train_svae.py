@@ -23,7 +23,8 @@ from svae.utils.training import save_checkpoint, Params
 
 
 def train(train_dir: str, config: Dict, force: bool = False,
-          metric_logger: Optional[Callable] = None, device: Optional[torch.device] = None):
+          metric_logger: Optional[Callable] = None, device: Optional[torch.device] = None,
+          verbose: bool = True):
     train_dir = Path(train_dir)
     if train_dir.exists() and force:
         shutil.rmtree(train_dir)
@@ -126,15 +127,15 @@ def train(train_dir: str, config: Dict, force: bool = False,
                 writer.add_scalar(f'dev/{metric}', value, epoch)
             if metric_logger is not None:
                 metric_logger({f"valid_{key}": value for key, value in valid_metrics.items()}, epoch)
-
-        for temperature in sampling_temperatures:
-            print("#" * 20)
-            print(f"Sentence samples. Temperature: {temperature}")
-            samples = model.sample(num_samples=10,
-                                   temperature=temperature,
-                                   device=device,
-                                   max_len=sampling_params.get('max_len', 50))
-            print(*samples, sep='\n')
+        if verbose:
+            for temperature in sampling_temperatures:
+                print("#" * 20)
+                print(f"Sentence samples. Temperature: {temperature}")
+                samples = model.sample(num_samples=10,
+                                       temperature=temperature,
+                                       device=device,
+                                       max_len=sampling_params.get('max_len', 50))
+                print(*samples, sep='\n')
         if scheduler_params is not None:
             scheduler.step()
 
@@ -165,7 +166,9 @@ if __name__ == '__main__':
                         help="Path to a directory where model checkpoints will be stored.")
     parser.add_argument("--force", action='store_true',
                         help="Whether to rewrite data if run directory already exists.")
+    parser.add_argument("--verbose", action='store_true',
+                        help="Verbosity of the training script.")
     args = parser.parse_args()
 
     config = json.loads(evaluate_file(args.config))
-    train(args.run_dir, config, args.force)
+    train(args.run_dir, config, args.force, verbose=args.verbose)
