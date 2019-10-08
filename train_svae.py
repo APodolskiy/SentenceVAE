@@ -22,7 +22,8 @@ from svae.utils.scheduler import WarmUpDecayLR
 from svae.utils.training import save_checkpoint, Params
 
 
-def train(train_dir: str, config: Dict, force: bool = False, metric_logger: Optional[Callable] = None):
+def train(train_dir: str, config: Dict, force: bool = False,
+          metric_logger: Optional[Callable] = None, device: Optional[torch.device] = None):
     train_dir = Path(train_dir)
     if train_dir.exists() and force:
         shutil.rmtree(train_dir)
@@ -68,8 +69,9 @@ def train(train_dir: str, config: Dict, force: bool = False, metric_logger: Opti
 
     TEXT.build_vocab(train_data, max_size=20_000)
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print(f"Running on device: {device}")
+    if device is None:
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        print(f"Running on device: {device}")
 
     train_iter, dev_iter, test_iter = Iterator.splits(
         datasets=(train_data, dev_data, test_data),
