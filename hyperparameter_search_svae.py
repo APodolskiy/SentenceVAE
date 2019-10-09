@@ -68,34 +68,6 @@ def hyperparameter_search(save_dir: str, experiment_name: str, params_file: str,
     pool.close()
     pool.join()
 
-    # TODO: parallelize hyperparameter search on multiple GPUs
-    """
-    for h_params in hyper_params_grid:
-        override_params = {k: json.dumps(param) for k, param in h_params.items()}
-
-        with open(params_file) as fp:
-            params = json.loads(evaluate_snippet('config', fp.read(), tla_codes=override_params))
-
-        # Creating run under the specified experiment
-        tags = None
-        if git_info is not None:
-            tags = {key: value for key, value in zip([MLFLOW_GIT_COMMIT, MLFLOW_GIT_BRANCH], git_info)}
-        run: mlflow.entities.Run = mlflow_client.create_run(experiment_id=experiment_id, tags=tags)
-        log_params(mlflow_client, run, h_params)
-        status = None
-        try:
-            with tempfile.TemporaryDirectory() as train_dir:
-                train(train_dir=train_dir,
-                      config=params,
-                      force=True,
-                      metric_logger=partial(log_metrics, mlflow_client, run))
-                mlflow_client.log_artifacts(run.info.run_uuid, train_dir)
-        except Exception as e:
-            print(f"Run failed! Exception occurred: {e}.")
-            status = 'FAILED'
-        mlflow_client.set_terminated(run.info.run_uuid, status=status)
-    """
-
 
 def init(local_devices_queue):
     global global_devices_queue
