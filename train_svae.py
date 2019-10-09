@@ -100,7 +100,7 @@ def train(train_dir: str, config: Dict, force: bool = False,
         print(f"EPOCH {epoch}\n")
         # Training
         model.train()
-        for batch in tqdm(train_iter, desc='Training'):
+        for batch in tqdm(train_iter, desc='Training', disable=verbose):
             iters += 1
             output = model(batch)
             loss = output['loss']
@@ -120,7 +120,7 @@ def train(train_dir: str, config: Dict, force: bool = False,
         # Validation
         model.eval()
         with torch.no_grad():
-            for batch in tqdm(dev_iter, desc='Validation'):
+            for batch in tqdm(dev_iter, desc='Validation', disable=verbose):
                 _ = model(batch)
             valid_metrics = model.get_metrics(reset=True)
             for metric, value in valid_metrics.items():
@@ -147,7 +147,7 @@ def train(train_dir: str, config: Dict, force: bool = False,
         print("Evaluating model on test data...")
         model.eval()
         with torch.no_grad():
-            for batch in tqdm(test_iter, desc='Test set evaluation'):
+            for batch in tqdm(test_iter, desc='Test set evaluation', disable=verbose):
                 _ = model(batch)
             test_metrics = model.get_metrics(reset=True)
             for metric, value in test_metrics.items():
