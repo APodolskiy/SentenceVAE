@@ -48,25 +48,37 @@ def hyperparameter_search(save_dir: str, experiment_name: str, params_file: str,
     git_info = get_git_info(Path.cwd())
 
     # Prepare devices
-    devices_queue = mp.Queue()
     cuda_devices = hyper_params.pop('cuda_devices', None)
 
     if cuda_devices is not None:
         num_devices = len(cuda_devices)
-        for gpu_id in cuda_devices:
-            devices_queue.put(torch.device(f'cuda:{gpu_id}'))
     else:
-        devices_queue.put(torch.device('cpu'))
+        cuda_devices = [torch.device('cuda' if torch.cuda.is_available() else 'cpu')]
         num_devices = 1
 
-    pool = mp.Pool(processes=num_devices, initializer=init, initargs=(devices_queue,))
-    pool.map(partial(run_experiment,
-                     params_file=params_file,
-                     git_info=git_info,
-                     mlflow_client=mlflow_client,
-                     experiment_id=experiment_id), hyper_params_grid)
-    pool.close()
-    pool.join()
+    if num_devices > 1:
+        devices_queue = mp.Queue()
+        for gpu_id in cuda_devices:
+            devices_queue.put(torch.device(f'cuda:{gpu_id}'))
+
+        # Parallel hyperparameter search
+        pool = mp.Pool(processes=num_devices, initializer=init, initargs=(devices_queue,))
+        pool.map(partial(run_experiment,
+                         params_file=params_file,
+                         git_info=git_info,
+                         mlflow_client=mlflow_client,
+                         experiment_id=experiment_id), hyper_params_grid)
+        pool.close()
+        pool.join()
+    else:
+        device = torch.device(cuda_devices)
+        # Non-parallel hyperparameter search
+        for h_params in hyper_params_grid:
+            run_experiment(h_params=h_params,
+                           params_file=params_file,
+                           git_info=git_info,
+                           mlflow_client=mlflow_client,
+                           experiment_id=experiment_id)
 
 
 def init(local_devices_queue):
@@ -74,8 +86,9 @@ def init(local_devices_queue):
     global_devices_queue = local_devices_queue
 
 
-def run_experiment(h_params: Dict, params_file, git_info, mlflow_client, experiment_id):
-    device = global_devices_queue.get()
+def run_experiment(h_params: Dict, params_file, git_info, mlflow_client, experiment_id, device = None):
+    if device is None:
+        device = global_devices_queue.get()
     try:
         override_params = {k: json.dumps(param) for k, param in h_params.items()}
 
