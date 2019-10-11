@@ -14,9 +14,9 @@ import torch.multiprocessing as mp
 import mlflow
 from mlflow.entities import Run
 from mlflow.tracking.client import MlflowClient
-from mlflow.utils.mlflow_tags import MLFLOW_GIT_COMMIT, MLFLOW_GIT_BRANCH
 
 from train_svae import train
+from svae.utils.mlflow_utils import get_experiment_id, get_git_tags
 
 try:
     mp.set_start_method('spawn')
@@ -30,11 +30,7 @@ def hyperparameter_search(save_dir: str, experiment_name: str, params_file: str,
     mlflow.set_tracking_uri(str(save_dir))
     mlflow_client = MlflowClient(tracking_uri=str(save_dir))
     # Getting experiment
-    experiment = mlflow_client.get_experiment_by_name(experiment_name)
-    if experiment is None:
-        experiment_id = mlflow_client.create_experiment(experiment_name)
-    else:
-        experiment_id = experiment.experiment_id
+    experiment_id = get_experiment_id(mlflow_client, experiment_name)
 
     with open(hyper_params_file, 'r') as fp:
         hyper_params = json.load(fp)
@@ -45,7 +41,7 @@ def hyperparameter_search(save_dir: str, experiment_name: str, params_file: str,
         raise ValueError(f"Currently only grid search is being supported.")
 
     hyper_params_grid = ParameterGrid(hyper_params)
-    git_info = get_git_info(Path.cwd())
+    tags = get_git_tags(Path.cwd())
 
     # Prepare devices
     cuda_devices = hyper_params.pop('cuda_devices', None)
@@ -65,7 +61,7 @@ def hyperparameter_search(save_dir: str, experiment_name: str, params_file: str,
         pool = mp.Pool(processes=num_devices, initializer=init, initargs=(devices_queue,))
         pool.map(partial(run_experiment,
                          params_file=params_file,
-                         git_info=git_info,
+                         tags=tags,
                          mlflow_client=mlflow_client,
                          experiment_id=experiment_id), hyper_params_grid)
         pool.close()
@@ -76,7 +72,7 @@ def hyperparameter_search(save_dir: str, experiment_name: str, params_file: str,
         for h_params in hyper_params_grid:
             run_experiment(h_params=h_params,
                            params_file=params_file,
-                           git_info=git_info,
+                           tags=tags,
                            mlflow_client=mlflow_client,
                            experiment_id=experiment_id)
 
@@ -86,7 +82,7 @@ def init(local_devices_queue):
     global_devices_queue = local_devices_queue
 
 
-def run_experiment(h_params: Dict, params_file, git_info, mlflow_client, experiment_id, device = None):
+def run_experiment(h_params: Dict, params_file, mlflow_client, experiment_id, tags=None, device=None):
     if device is None:
         device = global_devices_queue.get()
     try:
@@ -96,9 +92,6 @@ def run_experiment(h_params: Dict, params_file, git_info, mlflow_client, experim
             params = json.loads(evaluate_snippet('config', fp.read(), tla_codes=override_params))
 
         # Creating run under the specified experiment
-        tags = None
-        if git_info is not None:
-            tags = {key: value for key, value in zip([MLFLOW_GIT_COMMIT, MLFLOW_GIT_BRANCH], git_info)}
         run: mlflow.entities.Run = mlflow_client.create_run(experiment_id=experiment_id, tags=tags)
         log_params(mlflow_client, run, h_params)
         status = None
@@ -128,26 +121,6 @@ def log_metrics(client: MlflowClient, run: mlflow.entities.Run,
                 metrics: Dict, step: Optional[int] = None):
     for key, value in metrics.items():
         client.log_metric(run_id=run.info.run_uuid, key=key, value=value, step=step)
-
-
-def get_git_info(path: Union[str, Path]) -> Optional[Tuple[str, str]]:
-    """
-    Mainly adaptation of mlflow.utils.context _get_git_commit function.
-    :param path:
-    :return:
-    """
-    path = Path(path)
-    if not path.exists():
-        return None
-    if path.is_file():
-        path = path.parent
-    try:
-        repo = git.Repo(path)
-        commit = repo.head.commit.hexsha
-        branch = repo.active_branch.name
-        return commit, branch
-    except (git.InvalidGitRepositoryError, git.GitCommandNotFound, ValueError, git.NoSuchPathError):
-        return None
 
 
 if __name__ == '__main__':
