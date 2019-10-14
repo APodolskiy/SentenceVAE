@@ -1,13 +1,18 @@
 from argparse import ArgumentParser
+from functools import partial
 import json
 from pprint import pprint
 import shutil
+import tempfile
 from typing import Dict, Optional, Callable
 
 from _jsonnet import evaluate_file
+import dill
 from pathlib import Path
 
-import dill
+import mlflow
+from mlflow.tracking import MlflowClient
+
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
 
@@ -18,6 +23,7 @@ from torchtext.data import Field, Iterator
 from svae.dataset_utils import *
 from svae.dataset_utils.datasets import PTB, YelpReview
 from svae.svae import RecurrentVAE
+from svae.utils.mlflow_utils import get_experiment_id, get_git_tags, log_metrics, log_params
 from svae.utils.scheduler import WarmUpDecayLR
 from svae.utils.training import save_checkpoint, Params
 
@@ -158,6 +164,27 @@ def train(train_dir: str, config: Dict, force: bool = False,
     writer.close()
 
 
+def run_experiment(params: Dict, mlflow_client, experiment_id,
+                   device=None, tags=None, verbose: bool = False):
+    # Creating run under the specified experiment
+    run: mlflow.entities.Run = mlflow_client.create_run(experiment_id=experiment_id, tags=tags)
+    log_params(mlflow_client, run, params)
+    status = None
+    try:
+        with tempfile.TemporaryDirectory() as train_dir:
+            train(train_dir=train_dir,
+                  config=params,
+                  force=True,
+                  metric_logger=partial(log_metrics, mlflow_client, run),
+                  device=device,
+                  verbose=verbose)
+            mlflow_client.log_artifacts(run.info.run_uuid, train_dir)
+    except Exception as e:
+        print(f"Run failed! Exception occurred: {e}.")
+        status = 'FAILED'
+    mlflow_client.set_terminated(run.info.run_uuid, status=status)
+
+
 if __name__ == '__main__':
     parser = ArgumentParser(description="Training of Sentence VAE")
     parser.add_argument("--config", type=str, required=True, metavar='PATH',
@@ -166,9 +193,19 @@ if __name__ == '__main__':
                         help="Path to a directory where model checkpoints will be stored.")
     parser.add_argument("--force", action='store_true',
                         help="Whether to rewrite data if run directory already exists.")
+    parser.add_argument("--experiment-name", type=str, metavar="ID",
+                        help="Name of experiment if training process is run under mlflow")
     parser.add_argument("--verbose", action='store_true',
                         help="Verbosity of the training script.")
     args = parser.parse_args()
 
-    config = json.loads(evaluate_file(args.config))
-    train(args.run_dir, config, args.force, verbose=args.verbose)
+    params = json.loads(evaluate_file(args.config))
+
+    if args.experiment_name is not None:
+        mlflow.set_tracking_uri(args.run_dir)
+        mlflow_client = MlflowClient(args.run_dir)
+        experiment_id = get_experiment_id(mlflow_client, args.experiment_name)
+        tags = get_git_tags(Path.cwd())
+        run_experiment(params, mlflow_client, experiment_id, tags=tags)
+
+    train(args.run_dir, params, args.force, verbose=args.verbose)
