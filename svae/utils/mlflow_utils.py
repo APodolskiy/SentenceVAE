@@ -2,8 +2,20 @@ import git
 from pathlib import Path
 from typing import Union, Optional, Tuple, Dict
 
+from mlflow.entities import Run
 from mlflow.tracking import MlflowClient
 from mlflow.utils.mlflow_tags import MLFLOW_GIT_COMMIT, MLFLOW_GIT_BRANCH
+
+
+def log_params(client: MlflowClient, run: Run, params: Dict):
+    for key, value in params.items():
+        client.log_param(run_id=run.info.run_uuid, key=key, value=value)
+
+
+def log_metrics(client: MlflowClient, run: Run,
+                metrics: Dict, step: Optional[int] = None):
+    for key, value in metrics.items():
+        client.log_metric(run_id=run.info.run_uuid, key=key, value=value, step=step)
 
 
 def get_experiment_id(mlflow_client: MlflowClient, experiment_name: str) -> int:
