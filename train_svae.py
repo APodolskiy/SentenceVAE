@@ -102,11 +102,12 @@ def train(train_dir: str, config: Dict, force: bool = False,
 
     iters = 0
     for epoch in range(training_params.epochs):
-        print("#" * 20)
-        print(f"EPOCH {epoch}\n")
+        if verbose:
+            print("#" * 20)
+            print(f"EPOCH {epoch}\n")
         # Training
         model.train()
-        for batch in tqdm(train_iter, desc='Training', disable=verbose):
+        for batch in tqdm(train_iter, desc='Training', disable=not verbose):
             iters += 1
             output = model(batch)
             loss = output['loss']
@@ -126,7 +127,7 @@ def train(train_dir: str, config: Dict, force: bool = False,
         # Validation
         model.eval()
         with torch.no_grad():
-            for batch in tqdm(dev_iter, desc='Validation', disable=verbose):
+            for batch in tqdm(dev_iter, desc='Validation', disable=not verbose):
                 _ = model(batch)
             valid_metrics = model.get_metrics(reset=True)
             for metric, value in valid_metrics.items():
@@ -150,14 +151,16 @@ def train(train_dir: str, config: Dict, force: bool = False,
     save_checkpoint(model.state_dict(), train_dir)
 
     if params.get('eval_on_test', False):
-        print("Evaluating model on test data...")
+        if verbose:
+            print("Evaluating model on test data...")
         model.eval()
         with torch.no_grad():
-            for batch in tqdm(test_iter, desc='Test set evaluation', disable=verbose):
+            for batch in tqdm(test_iter, desc='Test set evaluation', disable=not verbose):
                 _ = model(batch)
             test_metrics = model.get_metrics(reset=True)
-            for metric, value in test_metrics.items():
-                print(f"{metric}: {value}")
+            if verbose:
+                for metric, value in test_metrics.items():
+                    print(f"{metric}: {value}")
             if metric_logger is not None:
                 metric_logger(test_metrics)
 
