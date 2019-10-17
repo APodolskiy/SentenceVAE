@@ -123,7 +123,7 @@ ENV/
 # Data folder
 /data
 /runs
-/configs
+/configs/
 !/configs/svae/basic_config.jsonnet
 !/configs/svae/hyperparameter_search_config.jsonnet
 !/configs/svae/hyperparams_grid.json
