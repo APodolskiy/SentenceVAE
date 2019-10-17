@@ -94,8 +94,8 @@ def train_process(h_params: Dict, params_file, mlflow_client,
                   experiment_id, tags=None, verbose: bool = False):
     device = global_devices_queue.get()
     try:
-        params = get_overriden_params(h_params, params_file=params_file)
-        run_experiment(params=params,
+        run_experiment(h_params=h_params,
+                       params_file=params_file,
                        mlflow_client=mlflow_client,
                        experiment_id=experiment_id,
                        device=device,

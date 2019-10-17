@@ -4,7 +4,7 @@ import json
 from pprint import pprint
 import shutil
 import tempfile
-from typing import Dict, Optional, Callable
+from typing import Dict, Optional, Callable, Any
 
 from _jsonnet import evaluate_file
 import dill
@@ -21,6 +21,7 @@ import torch
 import torch.optim as optim
 from torchtext.data import Field, Iterator
 
+from hyperparameter_search_svae import get_overriden_params
 from svae.dataset_utils import *
 from svae.dataset_utils.datasets import PTB, YelpReview
 from svae.svae import RecurrentVAE
@@ -168,11 +169,13 @@ def train(train_dir: str, config: Dict, force: bool = False,
     writer.close()
 
 
-def run_experiment(params: Dict, mlflow_client, experiment_id,
-                   device=None, tags=None, verbose: bool = False):
+def run_experiment(h_params: Dict[str, Any], params_file: str, mlflow_client: MlflowClient,
+                   experiment_id: int, device: Optional[torch.device] = None,
+                   tags: Optional[Dict[str, str]] = None, verbose: bool = False):
+    params = get_overriden_params(h_params, params_file=params_file)
     # Creating run under the specified experiment
     run: Run = mlflow_client.create_run(experiment_id=experiment_id, tags=tags)
-    log_params(mlflow_client, run, params)
+    log_params(mlflow_client, run, h_params)
     status = None
     try:
         with tempfile.TemporaryDirectory() as train_dir:
@@ -193,6 +196,8 @@ if __name__ == '__main__':
     parser = ArgumentParser(description="Training of Sentence VAE")
     parser.add_argument("--config", type=str, required=True, metavar='PATH',
                         help="Path to a configuration file.")
+    parser.add_argument("--hyper-parameters", type=str, metavar='PATH',
+                        help="Path to a hyper parameters file.")
     parser.add_argument("--run-dir", type=str, required=True, metavar='PATH',
                         help="Path to a directory where model checkpoints will be stored.")
     parser.add_argument("--force", action='store_true',
@@ -203,13 +208,16 @@ if __name__ == '__main__':
                         help="Verbosity of the training script.")
     args = parser.parse_args()
 
-    params = json.loads(evaluate_file(args.config))
-
     if args.experiment_name is not None:
+        if args.hyper_parameters is None:
+            raise ValueError("You should provide hyper-parameters file to log into mlflow.")
+        with open(args.hyper_parameters) as fp:
+            h_params = json.load(fp)
         mlflow.set_tracking_uri(args.run_dir)
         mlflow_client = MlflowClient(args.run_dir)
         experiment_id = get_experiment_id(mlflow_client, args.experiment_name)
         tags = get_git_tags(Path.cwd())
-        run_experiment(params, mlflow_client, experiment_id, tags=tags)
+        run_experiment(h_params, args.config, mlflow_client, experiment_id, tags=tags)
 
+    params = json.loads(evaluate_file(args.config))
     train(args.run_dir, params, args.force, verbose=args.verbose)
