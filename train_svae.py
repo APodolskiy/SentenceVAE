@@ -11,6 +11,7 @@ import dill
 from pathlib import Path
 
 import mlflow
+from mlflow.entities import Run
 from mlflow.tracking import MlflowClient
 
 from tensorboardX import SummaryWriter
@@ -170,7 +171,7 @@ def train(train_dir: str, config: Dict, force: bool = False,
 def run_experiment(params: Dict, mlflow_client, experiment_id,
                    device=None, tags=None, verbose: bool = False):
     # Creating run under the specified experiment
-    run: mlflow.entities.Run = mlflow_client.create_run(experiment_id=experiment_id, tags=tags)
+    run: Run = mlflow_client.create_run(experiment_id=experiment_id, tags=tags)
     log_params(mlflow_client, run, params)
     status = None
     try:
