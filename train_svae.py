@@ -6,7 +6,7 @@ import shutil
 import tempfile
 from typing import Dict, Optional, Callable, Any
 
-from _jsonnet import evaluate_file
+from _jsonnet import evaluate_file, evaluate_snippet
 import dill
 from pathlib import Path
 
@@ -190,6 +190,14 @@ def run_experiment(h_params: Dict[str, Any], params_file: str, mlflow_client: Ml
         print(f"Run failed! Exception occurred: {e}.")
         status = 'FAILED'
     mlflow_client.set_terminated(run.info.run_uuid, status=status)
+
+
+def get_overriden_params(h_params: Dict, params_file: str) -> Dict:
+    override_params = {k: json.dumps(param) for k, param in h_params.items()}
+
+    with open(params_file) as fp:
+        params = json.loads(evaluate_snippet('config', fp.read(), tla_codes=override_params))
+    return params
 
 
 if __name__ == '__main__':

@@ -4,7 +4,6 @@ import json
 from pathlib import Path
 from typing import Dict
 
-from _jsonnet import evaluate_snippet
 from sklearn.model_selection import ParameterGrid
 import torch
 import torch.multiprocessing as mp
@@ -68,8 +67,8 @@ def hyperparameter_search(save_dir: str, experiment_name: str, params_file: str,
         device = torch.device(cuda_devices)
         # Non-parallel hyperparameter search
         for h_params in hyper_params_grid:
-            params = get_overriden_params(h_params=h_params, params_file=params_file)
-            run_experiment(params=params,
+            run_experiment(h_params=h_params,
+                           params_file=params_file,
                            mlflow_client=mlflow_client,
                            experiment_id=experiment_id,
                            device=device,
@@ -80,14 +79,6 @@ def hyperparameter_search(save_dir: str, experiment_name: str, params_file: str,
 def init(local_devices_queue):
     global global_devices_queue
     global_devices_queue = local_devices_queue
-
-
-def get_overriden_params(h_params: Dict, params_file: str) -> Dict:
-    override_params = {k: json.dumps(param) for k, param in h_params.items()}
-
-    with open(params_file) as fp:
-        params = json.loads(evaluate_snippet('config', fp.read(), tla_codes=override_params))
-    return params
 
 
 def train_process(h_params: Dict, params_file, mlflow_client,
