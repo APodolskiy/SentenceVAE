@@ -225,7 +225,7 @@ if __name__ == '__main__':
         mlflow_client = MlflowClient(args.run_dir)
         experiment_id = get_experiment_id(mlflow_client, args.experiment_name)
         tags = get_git_tags(Path.cwd())
-        run_experiment(h_params, args.config, mlflow_client, experiment_id, tags=tags)
+        run_experiment(h_params, args.config, mlflow_client, experiment_id, tags=tags, verbose=args.verbose)
 
     params = json.loads(evaluate_file(args.config))
     train(args.run_dir, params, args.force, verbose=args.verbose)
