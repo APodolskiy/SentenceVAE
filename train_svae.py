@@ -21,7 +21,6 @@ import torch
 import torch.optim as optim
 from torchtext.data import Field, Iterator
 
-from hyperparameter_search_svae import get_overriden_params
 from svae.dataset_utils import *
 from svae.dataset_utils.datasets import PTB, YelpReview
 from svae.svae import RecurrentVAE
@@ -72,7 +71,8 @@ def train(train_dir: str, config: Dict, force: bool = False,
         train_data, dev_data, test_data = YelpReview.splits(fields=fields,
                                                             num_samples=120_000,
                                                             split_ratio=[100_000, 10_000, 10_000],
-                                                            max_len=150)
+                                                            max_len=150,
+                                                            verbose=verbose)
     else:
         raise ValueError(f"Dataset {dataset_name} is not supported!")
 

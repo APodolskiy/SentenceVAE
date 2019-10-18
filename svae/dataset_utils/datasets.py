@@ -54,6 +54,7 @@ class YelpReview(Dataset):
                  add_cls: bool = False,
                  random_state: int = 162,
                  max_len: Optional[int] = None,
+                 verbose: bool = True,
                  **kwargs):
         duplicate_spaces_re = re.compile(r' +')
         with open(path, 'r', encoding='utf-8') as fp:
@@ -71,7 +72,7 @@ class YelpReview(Dataset):
             random.seed(random_state)
             all_data = random.sample(all_data, num_samples)
         examples = []
-        for data in tqdm(all_data, desc='Converting data into examples'):
+        for data in tqdm(all_data, desc='Converting data into examples', disable=not verbose):
             examples.append(Example.fromlist(data=data, fields=fields))
         super().__init__(examples=examples, fields=fields, **kwargs)
 
@@ -86,9 +87,10 @@ class YelpReview(Dataset):
                add_cls: bool = False,
                random_state: int = 162,
                max_len: Optional[int] = None,
+               verbose: bool = True,
                **kwargs):
         path = os.path.join(root, cls.name, 'train.csv')
-        full_dataset = YelpReview(path=path, fields=fields, num_samples=num_samples,
+        full_dataset = YelpReview(path=path, fields=fields, num_samples=num_samples, verbose=verbose,
                                   add_cls=add_cls, random_state=random_state, max_len=max_len, **kwargs)
         splitted_data = full_dataset.split(split_ratio=split_ratio, stratified=stratified, strata_field=strata_field)
         return splitted_data
