@@ -9,5 +9,6 @@
   "annealing_type": "linear",
   "annealing_steps": 40000,
   "learning_rate": 1e-4,
+  "out_drop_p": 0.5,
   "beta1": 0.9
 }

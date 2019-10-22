@@ -30,6 +30,7 @@ class RecurrentVAE(nn.Module):
         # Model
         self.embedding = nn.Embedding(len(self.vocab), self.embed_dim)
         self.embed_drop = nn.Dropout(self.params.get('embedding_drop_p', 0.0))
+        self.out_drop = nn.Dropout(p=params.get("out_drop_p", 0.0))
 
         encoder_params = params.pop('encoder')
         decoder_params = params.pop('decoder')
@@ -78,6 +79,7 @@ class RecurrentVAE(nn.Module):
         trg_inp, trg_out = trg[:-1], trg[1:]
         out, _ = self.decode(z, trg_inp, trg_lengths - 1)
 
+        out = self.out_drop(out)
         logits = self.out2vocab(out)
         logp = torch.log_softmax(logits, dim=-1)
         logp_words = logp.transpose(0, 1).contiguous().view(-1, len(self.vocab))

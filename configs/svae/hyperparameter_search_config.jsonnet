@@ -5,19 +5,22 @@ function (
     hidden_dim = 1024,
     p_drop = 0.5,
     p_word_drop = 0.3,
+    embedding_drop_p = 0.5,
+    out_drop_p = 0.5,
     tie_weights = false,
     // training hyperparams
     epochs = 40,
     annealing_type = 'linear',
     annealing_steps = 10000,
     learning_rate = 1e-3,
-    beta1 = 0.5,
+    beta1 = 0.9,
     cuda_device = 0
 )
 {
     model: {
         embed_dim: embed_dim,
-        embedding_drop_p: 0.5,
+        embedding_drop_p: embedding_drop_p,
+        out_drop_p: out_drop_p,
         latent_dim: latent_dim,
         word_drop_p: p_word_drop,
         tie_weights: tie_weights,
