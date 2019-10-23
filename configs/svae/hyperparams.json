@@ -3,7 +3,7 @@
   "embed_dim": 512,
   "hidden_dim": 1024,
   "p_drop": 0.3,
-  "p_word_drop": 0.3,
+  "p_word_drop": 0.0,
   "tie_weights": false,
   "epochs": 40,
   "annealing_type": "linear",
