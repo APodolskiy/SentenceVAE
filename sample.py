@@ -34,5 +34,5 @@ if __name__ == '__main__':
     model.eval()
 
     # TODO: add different samplers
-    samples = model.sample()
+    samples = model.sample(num_samples=args.num_samples)
     print("\n".join(samples))
