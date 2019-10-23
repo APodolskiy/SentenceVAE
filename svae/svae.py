@@ -186,9 +186,9 @@ class RecurrentVAE(nn.Module):
                 logits = self.out2vocab(out)
                 if temperature != 1.:
                     logits.div_(temperature)
-                prev_words = self._sample_words(logits)
-                done = [(el[0] == self.eos_idx) and flag for el, flag in zip(prev_words, done)]
-                prev_words = prev_words.t()
+                sampled_words = self._sample_words(logits)
+                done = [(el[0] == self.eos_idx) and flag for el, flag in zip(sampled_words, done)]
+                prev_words = sampled_words.t()
                 gen_words.append(prev_words)
                 iters += 1
         # sentences acquisition
