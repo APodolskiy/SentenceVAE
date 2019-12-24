@@ -9,9 +9,13 @@ from svae.utils.modules import ResidualBlock
 
 
 class RNNDecoder(nn.Module):
-    def __init__(self, rnn_type: str = 'gru',
-                 input_size: int = 128, hidden_size: int = 128,
-                 num_layers: int = 1, dropout: float = 0, pad_value: int = 0):
+    def __init__(self,
+                 rnn_type: str = 'gru',
+                 input_size: int = 128,
+                 hidden_size: int = 128,
+                 num_layers: int = 1,
+                 dropout: float = 0,
+                 pad_value: int = 0):
         super().__init__()
         assert rnn_type in RNN_TYPES
         self.type = rnn_type
