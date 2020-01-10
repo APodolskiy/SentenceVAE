@@ -22,7 +22,7 @@ import torch.optim as optim
 from torchtext.data import Field, Iterator
 
 from svae.dataset_utils import *
-from svae.dataset_utils.datasets import PTB, YelpReview
+from svae.dataset_utils.datasets import PTB, YelpReview, YahooAnswers
 from svae.svae import RecurrentVAE
 from svae.utils.mlflow_utils import get_experiment_id, get_git_tags, log_metrics, log_params
 from svae.utils.scheduler import WarmUpDecayLR
@@ -39,7 +39,7 @@ def train(train_dir: str, config: Dict, force: bool = False,
 
     params_file = train_dir / f"config.jsonnet"
     with params_file.open('w') as fp:
-        json.dump(config, fp)
+        json.dump(config, fp, indent=4)
     params = Params(config)
     pprint(f"Config:")
     pprint(config)
@@ -73,6 +73,17 @@ def train(train_dir: str, config: Dict, force: bool = False,
                                                             split_ratio=[100_000, 10_000, 10_000],
                                                             max_len=150,
                                                             verbose=verbose)
+    elif dataset_name == "YahooAnswers":
+        TEXT = Field(sequential=True, use_vocab=True, lower=True,
+                     init_token=SOS_TOKEN, eos_token=EOS_TOKEN,
+                     pad_token=PAD_TOKEN, unk_token=UNK_TOKEN,
+                     tokenize="spacy", include_lengths=True)
+        fields = (('inp', TEXT), ('trg', TEXT))
+        train_data, dev_data, test_data = YahooAnswers.splits(fields=fields,
+                                                              num_samples=120_00,
+                                                              split_ratio=[100_000, 10_000, 10_000],
+                                                              max_len=200,
+                                                              verbose=verbose)
     else:
         raise ValueError(f"Dataset {dataset_name} is not supported!")
 
