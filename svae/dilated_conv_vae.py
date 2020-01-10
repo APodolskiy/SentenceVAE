@@ -121,14 +121,18 @@ class DilatedConvVAE(nn.Module):
     def decode(self, latent: torch.Tensor,
                trg_inp: torch.Tensor,
                trg_lengths: torch.Tensor) -> torch.Tensor:
+        # b x z
         h_init = self.latent2hidden(latent)
-        h_init = h_init.expand((self.decoder.num_layers, *h_init.size())).contiguous()
-        if self.decoder.type == 'lstm':
-            h_init = (h_init, torch.zeros_like(h_init))
+        h_init = h_init.repeat(trg_inp.size(0), 1, 1)
+
         trg_inp = self.word_dropout(trg_inp)
+        # s x b x
         trg_emb = self.embedding(trg_inp)
         trg_emb = self.embed_drop(trg_emb)
-        out = self.decoder(trg_emb, trg_lengths, h_init)
+
+        decoder_input = torch.cat((trg_emb, h_init), dim=-1)
+
+        out = self.decoder(decoder_input)
         return out
 
     def sample_posterior(self, mu: torch.Tensor, sigma: torch.Tensor) -> torch.Tensor:

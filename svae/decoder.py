@@ -44,8 +44,7 @@ class ConvDecoder(nn.Module):
                  residual_size: int = 512,
                  kernel_size: int = 3,
                  dilation_sizes: Iterable[int] = (1, 2, 4),
-                 dropout: float = 0.0,
-                 pad_value: int = 0):
+                 dropout: float = 0.1):
         super().__init__()
         self.modules = nn.ModuleList()
         for dilation_size in dilation_sizes:
