@@ -20,6 +20,7 @@ function (
 )
 {
     model: {
+        model_type: "svae",
         embed_dim: embed_dim,
         embedding_drop_p: embedding_drop_p,
         out_drop_p: out_drop_p,

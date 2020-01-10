@@ -23,6 +23,7 @@ from torchtext.data import Field, Iterator
 
 from svae.dataset_utils import *
 from svae.dataset_utils.datasets import PTB, YelpReview, YahooAnswers
+from svae.dilated_conv_vae import DilatedConvVAE
 from svae.svae import RecurrentVAE
 from svae.utils.mlflow_utils import get_experiment_id, get_git_tags, log_metrics, log_params
 from svae.utils.scheduler import WarmUpDecayLR
@@ -104,7 +105,14 @@ def train(train_dir: str, config: Dict, force: bool = False,
         device=device
     )
 
-    model = RecurrentVAE(vocab=TEXT.vocab, params=params.pop('model'))
+    model_params = params.pop('model')
+    model_type = model_params.pop('model_type')
+    if model_type == 'svae':
+        model = RecurrentVAE(vocab=TEXT.vocab, params=model_params)
+    elif model_type == 'ivae':
+        model = DilatedConvVAE(vocab=TEXT.vocab, params=model_params)
+    else:
+        raise ValueError(f"Unsupported model type: {model_type}")
     model.to(device)
     optimizer = optim.Adam(params=model.parameters(), **training_params.pop('optimizer'))
 

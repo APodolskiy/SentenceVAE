@@ -2,6 +2,7 @@ local annealing_type = 'linear';
 
 {
     model: {
+        model_type: "svae",
         embed_dim: 512,
         embedding_drop_p: 0.5,
         latent_dim: 32,

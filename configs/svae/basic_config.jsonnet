@@ -2,6 +2,7 @@ local annealing_type = 'logistic';
 
 {
     model: {
+        model_type: "svae",
         embed_dim: 300,
         embedding_drop_p: 0.5,
         latent_dim: 16,
