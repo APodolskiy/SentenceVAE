@@ -54,6 +54,7 @@ class ConvDecoder(nn.Module):
                 kernel_size=kernel_size,
                 dilation=dilation_size
             ))
+            self.module_seq.append(nn.Dropout(p=dropout))
 
     def forward(self, x: torch.Tensor):
         # (s, b, u) -> (b, u, s)
