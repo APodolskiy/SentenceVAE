@@ -35,11 +35,11 @@ class DilatedConvVAE(nn.Module):
         encoder_params = params.pop('encoder')
         decoder_params = params.pop('decoder')
         self.encoder = RNNEncoder(**encoder_params, pad_value=self.pad_idx)
-        self.decoder = ConvDecoder(**decoder_params, pad_value=self.pad_idx)
+        self.decoder = ConvDecoder(**decoder_params)
 
         self.code2mu = nn.Linear(params.hidden_output_size, self.latent_dim)
         self.code2sigma = nn.Linear(params.hidden_output_size, self.latent_dim)
-        self.latent2hidden = nn.Linear(self.latent_dim, decoder_params.hidden_size)
+        self.latent2hidden = nn.Linear(self.latent_dim, decoder_params.hidden_size - self.embed_dim)
         # Tie weights
         self.out2vocab = nn.Sequential()
         if params.tie_weights:
@@ -77,7 +77,7 @@ class DilatedConvVAE(nn.Module):
         self.kl_loss_metric(kl_loss.item() * batch_size, num_steps=batch_size)
 
         trg_inp, trg_out = trg[:-1], trg[1:]
-        out, _ = self.decode(z, trg_inp, trg_lengths - 1)
+        out = self.decode(z, trg_inp, trg_lengths - 1)
 
         out = self.out_drop(out)
         logits = self.out2vocab(out)
@@ -118,7 +118,8 @@ class DilatedConvVAE(nn.Module):
             'kl_loss': kl_loss
         }
 
-    def decode(self, latent: torch.Tensor,
+    def decode(self,
+               latent: torch.Tensor,
                trg_inp: torch.Tensor,
                trg_lengths: torch.Tensor) -> torch.Tensor:
         # b x z
@@ -172,21 +173,21 @@ class DilatedConvVAE(nn.Module):
 
         prev_words = torch.tensor([[self.sos_idx]*num_samples])
         prev_words = prev_words.to(device)
-        gen_words = []
+        preceding_words = prev_words
+        gen_words = [prev_words]
 
         hidden = self.latent2hidden(z)
-        hidden = hidden.expand((self.decoder.num_layers, *hidden.size())).contiguous()
-        if self.decoder.type == 'lstm':
-            hidden = (hidden, torch.zeros_like(hidden))
-
         done = [False] * num_samples
-        lengths = torch.tensor([1]*num_samples)
 
         iters = 0
         with torch.no_grad():
             while not all(done) and iters < max_len:
-                inp_embed = self.embedding(prev_words)
-                out, hidden = self.decoder(inp_embed, lengths, hidden)
+                h_init = hidden.repeat(preceding_words.size(0), 1, 1)
+                inp_embed = self.embedding(preceding_words)
+                inp_embed = self.embed_drop(inp_embed)
+                decoder_input = torch.cat((inp_embed, h_init), dim=-1)
+
+                out = self.decoder(decoder_input)[-1:]
                 logits = self.out2vocab(out)
                 if temperature != 1.:
                     logits.div_(temperature)
@@ -194,9 +195,10 @@ class DilatedConvVAE(nn.Module):
                 done = [(el[0] == self.eos_idx) and flag for el, flag in zip(sampled_words, done)]
                 prev_words = sampled_words.t()
                 gen_words.append(prev_words)
+                preceding_words = torch.cat(gen_words, dim=0)
                 iters += 1
         # sentences acquisition
-        indices_seqs = torch.cat(gen_words, dim=0).t().tolist()
+        indices_seqs = torch.cat(gen_words[1:], dim=0).t().tolist()
         samples = []
         for indices in indices_seqs:
             sentence = self._idx2sentence(indices)

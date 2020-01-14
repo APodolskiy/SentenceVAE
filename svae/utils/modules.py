@@ -14,7 +14,7 @@ class ResidualBlock(nn.Module):
         self.conv1 = nn.Conv1d(in_channels=in_channels,
                                out_channels=residual_channels,
                                kernel_size=1,
-                               padding=2)
+                               padding=0)
         self.conv2 = nn.Conv1d(in_channels=residual_channels,
                                out_channels=residual_channels,
                                dilation=dilation,
@@ -23,7 +23,7 @@ class ResidualBlock(nn.Module):
         self.conv3 = nn.Conv1d(in_channels=residual_channels,
                                out_channels=in_channels,
                                kernel_size=1,
-                               padding=2)
+                               padding=0)
 
     def forward(self, x: torch.Tensor):
         x_ = self.conv1(x).relu()

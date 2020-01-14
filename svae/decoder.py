@@ -40,16 +40,16 @@ class RNNDecoder(nn.Module):
 
 class ConvDecoder(nn.Module):
     def __init__(self,
-                 input_size: int = 1024,
+                 hidden_size: int = 1024,
                  residual_size: int = 512,
                  kernel_size: int = 3,
                  dilation_sizes: Iterable[int] = (1, 2, 4),
                  dropout: float = 0.1):
         super().__init__()
-        self.modules = nn.ModuleList()
+        self.module_seq = nn.ModuleList()
         for dilation_size in dilation_sizes:
-            self.modules.append(ResidualBlock(
-                in_channels=input_size,
+            self.module_seq.append(ResidualBlock(
+                in_channels=hidden_size,
                 residual_channels=residual_size,
                 kernel_size=kernel_size,
                 dilation=dilation_size
@@ -58,7 +58,7 @@ class ConvDecoder(nn.Module):
     def forward(self, x: torch.Tensor):
         # (s, b, u) -> (b, u, s)
         x = x.permute(1, 2, 0)
-        for module in self.modules:
+        for module in self.module_seq:
             x = module(x)
         # (b, u, s) -> (s, b, u)
         x = x.permute(2, 0, 1)
