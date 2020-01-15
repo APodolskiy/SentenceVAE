@@ -52,7 +52,8 @@ class ConvDecoder(nn.Module):
                 in_channels=hidden_size,
                 residual_channels=residual_size,
                 kernel_size=kernel_size,
-                dilation=dilation_size
+                dilation=dilation_size,
+                drop_prob=dropout
             ))
             self.module_seq.append(nn.Dropout(p=dropout))
 
