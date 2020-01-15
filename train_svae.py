@@ -134,7 +134,7 @@ def train(train_dir: str, config: Dict, force: bool = False,
             loss = output['loss']
             optimizer.zero_grad()
             loss.backward()
-            # TODO: add gradient clipping
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 5)
             optimizer.step()
             writer.add_scalar('train/ELBO', -output['rec_loss'] - output['kl_loss'], iters)
             writer.add_scalar('train/rec_loss', output['rec_loss'], iters)
